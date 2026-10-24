@@ -30,8 +30,6 @@ function AppShell() {
     <header className="app-header">
       <div className="header-inner">
         <button className="brand" onClick={() => dispatch({ type: 'navigation/go', route: 'import' })} aria-label="Racks home">racks<span className="brand-dot">.</span></button>
-        <span className="header-purpose">Your student money</span>
-        <span className="header-private"><span aria-hidden="true">◈</span> Your data stays on this device</span>
       </div>
       <nav className="journey-nav" aria-label="Your money journey"><ol>
         {steps.map((step, index) => <li key={step.route}><button className={'journey-step' + (index === current ? ' active' : '') + (index < current ? ' visited' : '')} disabled={index > 0 && !hasData} aria-current={index === current ? 'step' : undefined} onClick={() => dispatch({ type: 'navigation/go', route: step.route })}><span className="step-number">{index < current ? '✓' : `0${index + 1}`}</span><span>{step.label}</span>{index < 3 && <span className="step-arrow" aria-hidden="true">›</span>}</button></li>)}

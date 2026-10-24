@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseBritishDate, parsePounds } from '../src/features/import/money';
 import { confirmImport, possibleDuplicateIds, removeTransaction, summariseTransactions, upsertManualExpense, validateTransaction } from '../src/features/import/ledger';
 import { parseStatementLines } from '../src/features/import/statement';
-import { createTextPdf, SAMPLE_STATEMENT_LINES } from '../src/features/import/sample';
+import { createTextPdf, sampleStatementFilename, sampleStatementLines, SAMPLE_STATEMENT_LINES } from '../src/features/import/sample';
 import { textItemsToLines } from '../src/features/import/pdf';
 import type { LedgerState, Transaction } from '../src/features/import/types';
 import { getImportLedger, ledgerReplacement } from '../src/features/import/frontendAdapter';
@@ -92,6 +92,17 @@ describe('review and confirmation', () => {
     const row = preview.unresolvedRows[0];
     const repaired: Transaction = { ...cash(), id: row.id, source: 'statement', importId: preview.id, sourceRow: row.sourceRow };
     expect(confirmImport(empty(), preview, { ...options, transactions: [...preview.transactions, repaired] }).transactions).toHaveLength(19);
+  });
+  it('shifts the demo statement a whole month back so repeated demo imports stack up', () => {
+    expect(sampleStatementLines(0)).toEqual(SAMPLE_STATEMENT_LINES);
+    expect(sampleStatementLines(1)).toContain('Period: 01/09/2026 to 23/09/2026');
+    expect(sampleStatementLines(10)).toContain('Period: 01/12/2025 to 23/12/2025');
+    expect(sampleStatementFilename(1)).toBe('campus-demo-statement-2026-09.pdf');
+    const october = parse();
+    const september = parse(sampleStatementLines(1), 'fixture-september');
+    const ledger = confirmImport(empty(), october, { transactions: october.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] });
+    expect(possibleDuplicateIds(september.transactions, ledger.transactions)).toHaveLength(0);
+    expect(confirmImport(ledger, september, { transactions: september.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] }).imports).toHaveLength(2);
   });
   it('flags overlapping statements without silently deleting legitimate purchases', () => {
     const first = parse();

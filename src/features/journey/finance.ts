@@ -32,12 +32,15 @@ export function monthlyBaseline(rows: readonly Transaction[], coverage: Coverage
   return { income: Math.round(totals(rows).income / months), essentials: Math.max(0, Math.round(essentials / months)) }
 }
 
+/** Essentials never reserve the last slice, so everyday spending, cash savings and investing always stay adjustable. */
+export const MINIMUM_ALLOCATABLE_SHARE = 0.01
+
 /** Bills first; integer rounding always reconciles exactly to the available income. */
 export function allocateMoney(income: number, essentials: number, preferences: Pick<MoneyPlan, 'freedom' | 'cushion' | 'future' | 'investmentReady'>) {
   if (![income, essentials].every(value => Number.isSafeInteger(value) && value >= 0)) throw new Error('Use non-negative amounts in pence.')
   const weights = [preferences.freedom, preferences.cushion, preferences.future]
   if (!weights.every(value => Number.isFinite(value) && value >= 0 && value <= 100)) throw new Error('Choose priorities from 0 to 100.')
-  const reserved = Math.min(income, essentials), available = income - reserved
+  const reserved = Math.min(income, essentials, Math.floor(income * (1 - MINIMUM_ALLOCATABLE_SHARE))), available = income - reserved
   const weightTotal = weights.reduce((a, b) => a + b, 0)
   const freedom = weightTotal ? Math.floor(available * weights[0] / weightTotal) : 0
   const future = weightTotal ? Math.floor(available * weights[2] / weightTotal) : 0

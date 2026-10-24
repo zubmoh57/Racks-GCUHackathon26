@@ -35,7 +35,14 @@ describe('income and spending breakdown', () => {
 
 describe('monthly allocation', () => {
   it('reserves essentials before sharing the remainder', () => expect(allocateMoney(100000, 60000, preferences)).toEqual({ essentials: 60000, freedom: 20000, cushion: 14000, invest: 6000, shortfall: 0 }))
-  it('shows a shortfall instead of allocating money that does not exist', () => expect(allocateMoney(32000, 70000, preferences)).toEqual({ essentials: 32000, freedom: 0, cushion: 0, invest: 0, shortfall: 38000 }))
+  it('reports the shortfall but still leaves 1% adjustable when essentials exceed money in', () => expect(allocateMoney(32000, 70000, preferences)).toEqual({ essentials: 31680, freedom: 160, cushion: 112, invest: 48, shortfall: 38000 }))
+  it('never reserves the whole of money in, so investing can always be funded', () => {
+    for (const essentials of [32000, 100000, 1_000_000]) {
+      const result = allocateMoney(32000, essentials, { freedom: 0, cushion: 0, future: 100, investmentReady: true })
+      expect(result.essentials).toBeLessThanOrEqual(31680)
+      expect(result.invest).toBeGreaterThan(0)
+    }
+  })
   it('keeps the long-term share in cash until investing is explicitly enabled', () => expect(allocateMoney(100000, 60000, { ...preferences, investmentReady: false }).cushion).toBe(20000))
   it('keeps the remainder in cash if all priorities are zero', () => expect(allocateMoney(10000, 1000, { freedom: 0, cushion: 0, future: 0, investmentReady: true })).toEqual({ essentials: 1000, freedom: 0, cushion: 9000, invest: 0, shortfall: 0 }))
   it('reconciles every penny even for small amounts and uneven weights', () => {

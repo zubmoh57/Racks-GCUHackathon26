@@ -54,7 +54,27 @@ export function createTextPdf(lines: readonly string[]): Uint8Array<ArrayBuffer>
   return new TextEncoder().encode(pdf);
 }
 
-export function createSampleStatement(): File {
-  return new File([createTextPdf(SAMPLE_STATEMENT_LINES)], SAMPLE_FILENAME, { type: 'application/pdf' });
+/** Shift every dd/mm/yyyy in the demo statement back by whole months. Day numbers stay 01-23, so every month is valid. */
+function shiftMonths(line: string, monthsBack: number): string {
+  return line.replace(/\b(\d{2})\/(\d{2})\/(\d{4})\b/g, (_match, day: string, month: string, year: string) => {
+    const index = Number(year) * 12 + Number(month) - 1 - monthsBack;
+    return `${day}/${String(index % 12 + 1).padStart(2, '0')}/${Math.floor(index / 12)}`;
+  });
+}
+
+/** The demo statement for an earlier month, so repeated demo imports build a multi-month history. */
+export function sampleStatementLines(monthsBack = 0): string[] {
+  if (!Number.isInteger(monthsBack) || monthsBack < 0 || monthsBack > 240) throw new Error('Choose a whole number of months between 0 and 240.');
+  return SAMPLE_STATEMENT_LINES.map(line => shiftMonths(line, monthsBack));
+}
+
+export function sampleStatementFilename(monthsBack = 0): string {
+  if (!monthsBack) return SAMPLE_FILENAME;
+  const period = /Period:\s*\d{2}\/(\d{2})\/(\d{4})/.exec(sampleStatementLines(monthsBack).join('\n'));
+  return period ? `campus-demo-statement-${period[2]}-${period[1]}.pdf` : SAMPLE_FILENAME;
+}
+
+export function createSampleStatement(monthsBack = 0): File {
+  return new File([createTextPdf(sampleStatementLines(monthsBack))], sampleStatementFilename(monthsBack), { type: 'application/pdf' });
 }
 
