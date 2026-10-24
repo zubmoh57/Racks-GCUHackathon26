@@ -4,7 +4,8 @@ import { getImportLedger, ledgerReplacement } from './src/features/import/fronte
 import { ReviewTransactionForm } from './src/features/import/ReviewTransactionForm'
 import { removeTransaction, upsertManualExpense } from './src/features/import/ledger'
 import type { Transaction } from './src/features/import/types'
-import { dateLabel, money, spendingRatio, totals, transactionTone } from './src/features/journey/finance'
+import { coveredMonths, dateLabel, money, spendingRatio, totals, transactionTone } from './src/features/journey/finance'
+import { BalanceStrip } from './src/features/journey/BalanceStrip'
 
 const labels = { essential: 'Essential', flexible: 'Flexible', risk: 'Check this · gambling', incoming: 'Money in', neutral: 'Transfer / cash' }
 
@@ -12,15 +13,16 @@ export default function Dashboard() {
   const { state, dispatch } = useAppState()
   const [period, setPeriod] = useState('all')
   const [anchor, setAnchor] = useState(state.coverage?.endDate ?? new Date().toISOString().slice(0, 10))
-  const [includeFunding, setIncludeFunding] = useState(false)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Transaction | null>(null)
   const ledger = getImportLedger(state)
   const rows = state.transactions.filter(row => period === 'all' || row.date.slice(0, period === 'day' ? 10 : period === 'month' ? 7 : 4) === anchor.slice(0, period === 'day' ? 10 : period === 'month' ? 7 : 4))
   const summary = totals(rows)
-  const income = summary.income + (includeFunding ? summary.funding : 0)
+  const income = summary.income
   const ratio = spendingRatio(summary.spending, income)
+  const covered = coveredMonths(state.transactions)
+  const balanceMonth = period === 'day' || period === 'month' ? anchor.slice(0, 7) : covered[covered.length - 1] ?? anchor.slice(0, 7)
   const displayed = rows.filter(row => (filter === 'all' || transactionTone(row) === filter) && `${row.description} ${row.confirmedItem ?? ''} ${row.category}`.toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.date.localeCompare(a.date))
   const coverageLabel = state.coverage ? `${dateLabel(state.coverage.startDate)} – ${dateLabel(state.coverage.endDate)} ${state.coverage.endDate.slice(0, 4)}` : 'Your statements'
 
@@ -41,15 +43,15 @@ export default function Dashboard() {
     <section className="surface balance-panel" aria-label="Income and spending summary">
       <div className="panel-toolbar"><h2>Your money at a glance</h2><div className="date-controls"><div className="segmented" aria-label="Reporting period">{[['all', 'All dates'], ['day', 'Day'], ['month', 'Month'], ['year', 'Year']].map(([value, label]) => <button key={value} aria-pressed={period === value} onClick={() => setPeriod(value)}>{label}</button>)}</div>{period !== 'all' && <input type="date" aria-label="Date within reporting period" value={anchor} onChange={event => { if (event.target.value) setAnchor(event.target.value) }} />}</div></div>
       <div className="balance-grid">
-        <div className="balance-amount income-amount"><span className="metric-label">{includeFunding ? 'INCOME + STUDENT FUNDING' : 'INCOME'}</span><strong>{money(income)}</strong><span className="metric-detail">{includeFunding ? 'Funding is shown separately below' : 'Wages and other income'}</span></div>
-        <div className={'ratio-summary ' + ratio.tone}><span className="metric-label">SPENDING / {includeFunding ? 'MONEY IN' : 'INCOME'}</span><strong>{ratio.percent === null ? '—' : `${ratio.percent.toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`}</strong><span className="status-label">{ratio.label}</span></div>
+        <div className="balance-amount income-amount"><span className="metric-label">INCOME</span><strong>{money(income)}</strong><span className="metric-detail">Wages and other income</span></div>
+        <div className={'ratio-summary ' + ratio.tone}><span className="metric-label">SPENDING / INCOME</span><strong>{ratio.percent === null ? '—' : `${ratio.percent.toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`}</strong><span className="status-label">{ratio.label}</span></div>
         <div className="balance-amount spending-amount"><span className="metric-label">SPENDING</span><strong>{money(summary.spending)}</strong><span className="metric-detail">Purchases less {money(summary.refunds)} in refunds</span></div>
       </div>
-      <div className="balance-foot"><label className="check-label"><input type="checkbox" checked={includeFunding} onChange={event => setIncludeFunding(event.target.checked)} />Include student funding ({money(summary.funding)}) in the ratio</label><details><summary>How is this rated?</summary><p>Our budget guide: up to 70% great; above 70% to 90% good; above 90% to 100% needs improvement; above 100% over budget. These describe spending for the selected dates, not your overall financial health. Student funding can be a loan or a termly payment. Transfers and cash withdrawals are excluded.</p></details></div>
+      <BalanceStrip rows={state.transactions} imports={state.imports} month={balanceMonth} />
     </section>
     <section className="surface purchases-panel" aria-labelledby="purchases-title">
       <div className="panel-toolbar"><div><h2 id="purchases-title">Your transactions <span className="count-badge">{displayed.length}</span></h2><p className="subtle">Categories are suggestions. Edit anything that doesn’t look right.</p></div><button className="secondary-button" onClick={addCash}>+ Add other expenses</button></div>
-      <div className="purchase-filters"><div className="filter-tabs" aria-label="Filter transactions">{[['all', 'All activity'], ['essential', 'Essentials'], ['flexible', 'Flexible'], ['risk', 'Worth a look']].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div><input className="transaction-search" type="search" aria-label="Search transactions" placeholder="Search transactions" value={search} onChange={event => setSearch(event.target.value)} /></div>
+      <div className="purchase-filters"><div className="filter-tabs" aria-label="Filter transactions">{[['all', 'All activity'], ['essential', 'Essentials'], ['flexible', 'Flexible']].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div><input className="transaction-search" type="search" aria-label="Search transactions" placeholder="Search transactions" value={search} onChange={event => setSearch(event.target.value)} /></div>
       {editing && <div className="pdf-import transaction-editor"><h3>{editing.source === 'manual' ? 'Other expenses' : 'Edit transaction'}</h3><ReviewTransactionForm key={editing.id} transaction={editing} startDate={editing.source === 'manual' ? '1900-01-01' : state.coverage?.startDate ?? '1900-01-01'} endDate={editing.source === 'manual' ? '2100-12-31' : state.coverage?.endDate ?? '2100-12-31'} onSave={save} onCancel={() => setEditing(null)} /></div>}
       <div className="purchase-table-scroll" tabIndex={0} aria-label="Transaction list"><table className="purchase-table"><thead><tr><th>Transaction</th><th>Date</th><th>Category</th><th>Spending type</th><th className="numeric">Amount</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
         {displayed.map(row => { const tone = transactionTone(row); return <tr key={row.id} className={'transaction-' + tone}>

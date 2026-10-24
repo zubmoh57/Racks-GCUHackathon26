@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../src/assets/contracts'
-import { allocateMoney, monthlyBaseline, moveDivider, piePercentages, rebalanceShares, spendingRatio, totals, transactionTone } from '../src/features/journey/finance'
+import { monthBalances, monthlyBaseline, PRIORITY_MAX, recommendAllocation, spendingRatio, startingBalance, swapSaving, totals, transactionTone } from '../src/features/journey/finance'
 import { isProtected, savingsInput } from '../src/features/journey/savingsAdapter'
 import { monthLabel, statementMonths } from '../src/features/import/statementMonths'
 import type { StatementImport } from '../src/features/import/types'
 
 const row = (patch: Partial<Transaction> = {}): Transaction => ({ id: 'purchase', date: '2026-10-10', description: 'TESCO GLASGOW', merchant: 'Tesco', amountPence: -2500, currency: 'GBP', kind: 'expense', category: 'Groceries', source: 'statement', ...patch })
-const preferences = { freedom: 50, cushion: 35, future: 15, investmentReady: true }
 
 describe('income and spending breakdown', () => {
   it('separates funding and income, nets refunds and excludes own transfers and withdrawals', () => {
@@ -29,71 +28,80 @@ describe('income and spending breakdown', () => {
   })
   it('averages wages and net essentials over covered calendar months, excluding termly funding', () => {
     const baseline = monthlyBaseline([row(), row({ kind: 'refund', amountPence: 500 }), row({ kind: 'income', amountPence: 32000 }), row({ kind: 'funding', amountPence: 240000 })], { startDate: '2026-09-20', endDate: '2026-10-23', statementCount: 1 })
-    expect(baseline).toEqual({ income: 16000, essentials: 1000 })
+    expect(baseline).toEqual({ income: 16000, funding: 120000, essentials: 1000 })
+  })
+  it('runs income less spending from zero through the months', () => {
+    const rows = [row({ id: 'a', date: '2026-09-08', kind: 'income', amountPence: 32000 }), row({ id: 'b', date: '2026-09-12', amountPence: -2000 }), row({ id: 'c', date: '2026-10-05', amountPence: -77563 }), row({ id: 'd', date: '2026-10-09', kind: 'income', amountPence: 32000 })]
+    expect(monthBalances(rows, '2026-09')).toEqual({ opening: 0, closing: 30000, change: 30000, covered: true })
+    expect(monthBalances(rows, '2026-10')).toEqual({ opening: 30000, closing: -15563, change: -45563, covered: true })
+  })
+  it('leaves funding, transfers and cash withdrawals out of the balance', () => {
+    const rows = [row({ id: 'a', date: '2026-10-01', kind: 'funding', amountPence: 240000 }), row({ id: 'b', date: '2026-10-05', kind: 'cashWithdrawal', amountPence: -4000 }), row({ id: 'c', date: '2026-10-07', kind: 'transfer', amountPence: -10000 })]
+    expect(monthBalances(rows, '2026-10')).toEqual({ opening: 0, closing: 0, change: 0, covered: true })
+  })
+  it('runs on from the opening balance of the earliest statement, not the first one added', () => {
+    const held = (start: string, openingBalancePence: number | null): StatementImport => ({ id: start, fingerprint: start, filename: 'statement.pdf', layout: 'campus-v1', coverageStart: start, coverageEnd: `${start.slice(0, 7)}-23`, openingBalancePence, transactionIds: [], excludedRows: [] })
+    expect(startingBalance([held('2026-10-01', 156248), held('2026-09-01', 176286)])).toBe(176286)
+    expect(startingBalance([held('2026-10-01', null)])).toBeNull()
+    expect(startingBalance([])).toBeNull()
+    const rows = [row({ id: 'a', date: '2026-09-20', amountPence: -20038 }), row({ id: 'b', date: '2026-10-20', amountPence: -20038 })]
+    expect(monthBalances(rows, '2026-10', 176286)).toMatchObject({ opening: 156248, closing: 136210, change: -20038 })
+  })
+  it('nets a refund off the spending it reverses', () => {
+    const rows = [row({ date: '2026-10-03', amountPence: -2500 }), row({ id: 'refund', date: '2026-10-06', kind: 'refund', amountPence: 500 })]
+    expect(monthBalances(rows, '2026-10').change).toBe(-2000)
+  })
+  it('carries the running balance into a month with no activity of its own', () => {
+    expect(monthBalances([row({ date: '2026-09-12', amountPence: -2000 })], '2026-10')).toEqual({ opening: -2000, closing: -2000, change: 0, covered: false })
   })
 })
 
-describe('monthly allocation', () => {
-  it('reserves essentials before sharing the remainder', () => expect(allocateMoney(100000, 60000, preferences)).toEqual({ essentials: 60000, freedom: 20000, cushion: 14000, invest: 6000, shortfall: 0 }))
-  it('shows a shortfall instead of allocating money that does not exist', () => expect(allocateMoney(32000, 70000, preferences)).toEqual({ essentials: 32000, freedom: 0, cushion: 0, invest: 0, shortfall: 38000 }))
-  it('keeps the long-term share in cash until investing is explicitly enabled', () => expect(allocateMoney(100000, 60000, { ...preferences, investmentReady: false }).cushion).toBe(20000))
-  it('keeps the remainder in cash if all priorities are zero', () => expect(allocateMoney(10000, 1000, { freedom: 0, cushion: 0, future: 0, investmentReady: true })).toEqual({ essentials: 1000, freedom: 0, cushion: 9000, invest: 0, shortfall: 0 }))
-  it('reconciles every penny even for small amounts and uneven weights', () => {
-    for (let amount = 0; amount < 300; amount++) {
-      const result = allocateMoney(amount, 17, { freedom: 31, cushion: 7, future: 99, investmentReady: true })
-      expect(result.essentials + result.freedom + result.cushion + result.invest).toBe(amount)
-      expect(Math.min(result.essentials, result.freedom, result.cushion, result.invest)).toBeGreaterThanOrEqual(0)
+describe('recommended allocation', () => {
+  const ratings = { everyday: 5, savings: 3, investing: 2 }
+
+  it('reserves essentials, then splits the remainder in proportion to the ratings', () => {
+    expect(recommendAllocation(100000, 60000, ratings)).toEqual({ moneyIn: 100000, available: 40000, essentials: 60000, everyday: 20000, savings: 12000, investing: 8000, shortfall: 0 })
+  })
+  it('gives the bigger share to the higher rating', () => {
+    const result = recommendAllocation(100000, 0, { everyday: 1, savings: 2, investing: 7 })
+    expect(result.investing).toBeGreaterThan(result.savings)
+    expect(result.savings).toBeGreaterThan(result.everyday)
+  })
+  it('reports the shortfall but still leaves 1% to allocate when essentials exceed money in', () => {
+    expect(recommendAllocation(32000, 70000, { everyday: 5, savings: 5, investing: 0 })).toEqual({ moneyIn: 32000, available: 320, essentials: 31680, everyday: 160, savings: 160, investing: 0, shortfall: 38000 })
+  })
+  it('leaves everything in cash savings when nothing is rated', () => {
+    expect(recommendAllocation(10000, 1000, { everyday: 0, savings: 0, investing: 0 })).toMatchObject({ essentials: 1000, everyday: 0, savings: 9000, investing: 0 })
+  })
+  it('reconciles every penny even for small amounts and uneven ratings', () => {
+    for (let moneyIn = 0; moneyIn < 300; moneyIn++) {
+      const result = recommendAllocation(moneyIn, 17, { everyday: 3, savings: 1, investing: 9 })
+      expect(result.essentials + result.everyday + result.savings + result.investing).toBe(moneyIn)
+      expect(Math.min(result.essentials, result.everyday, result.savings, result.investing)).toBeGreaterThanOrEqual(0)
     }
   })
-  it('rejects invalid amounts and priorities', () => {
-    expect(() => allocateMoney(-1, 0, preferences)).toThrow()
-    expect(() => allocateMoney(100, 0, { ...preferences, freedom: NaN })).toThrow()
+  it('rejects invalid amounts and ratings', () => {
+    expect(() => recommendAllocation(-1, 0, ratings)).toThrow()
+    expect(() => recommendAllocation(100, 0, { ...ratings, everyday: PRIORITY_MAX + 1 })).toThrow()
+    expect(() => recommendAllocation(100, 0, { ...ratings, savings: 2.5 })).toThrow()
   })
 })
 
-describe('percentage controls', () => {
-  it('moves a divider between spending and cash without changing investing', () => expect(moveDivider(preferences, 'freedom', 'cushion', 60)).toEqual({ freedom: 60, cushion: 25, future: 15 }))
-  it('moves a cash/investing divider without changing spending', () => expect(moveDivider(preferences, 'cushion', 'future', 20)).toEqual({ freedom: 50, cushion: 20, future: 30 }))
-  it('clamps divider movement to its two slices without creating negative amounts', () => {
-    expect(moveDivider(preferences, 'freedom', 'cushion', 100)).toEqual({ freedom: 85, cushion: 0, future: 15 })
-    expect(moveDivider(preferences, 'cushion', 'future', -1)).toEqual({ freedom: 50, cushion: 0, future: 50 })
+describe('swap savings', () => {
+  it('totals what the same purchases would have cost at the alternative price', () => {
+    expect(swapSaving([420, 420, 420, 420, 420, 420], 360)).toEqual({ occurrences: 6, totalSaving: 360 })
   })
-  it('keeps the essentials percentage fixed while rounding the other slices to a complete 100%', () => {
-    for (let spending = 0; spending <= 1000; spending++) {
-      const percentages = piePercentages([20000, spending, 100000 - spending, 0], true)
-      expect(percentages[0]).toBe(16.7)
-      expect(percentages.reduce((sum, value) => sum + Math.round(value * 10), 0)).toBe(1000)
-    }
+  it('counts the whole spend when the alternative is free', () => {
+    expect(swapSaving([1299, 1299, 1299], 0)).toEqual({ occurrences: 3, totalSaving: 3897 })
   })
-  it('preserves the chosen percentage and rebalances the other two', () => {
-    expect(rebalanceShares({ freedom: 50, cushion: 35, future: 15 }, 'freedom', 70)).toEqual({ freedom: 70, cushion: 21, future: 9 })
+  it('never reports a dearer alternative as a negative saving', () => {
+    expect(swapSaving([300, 300], 500)).toEqual({ occurrences: 2, totalSaving: 0 })
   })
-  it('handles a slice going from all to none without introducing an investing allocation', () => {
-    expect(rebalanceShares({ freedom: 0, cushion: 100, future: 0 }, 'cushion', 0)).toEqual({ freedom: 100, cushion: 0, future: 0 })
+  it('has nothing to total without recorded purchases', () => expect(swapSaving([], 360)).toEqual({ occurrences: 0, totalSaving: 0 }))
+  it('rejects invalid amounts', () => {
+    expect(() => swapSaving([-1], 0)).toThrow()
+    expect(() => swapSaving([100], -1)).toThrow()
   })
-  it('prevents floating-point rebalancing from creating a negative sliver', () => {
-    const result = rebalanceShares({ freedom: 0.1, cushion: 99.9, future: 0 }, 'cushion', 0.1)
-    expect(result).toEqual({ freedom: 99.9, cushion: 0.1, future: 0 })
-    expect(() => allocateMoney(100000, 0, { ...result, investmentReady: true })).not.toThrow()
-  })
-  it('clamps boundaries and always keeps the split at 100%', () => {
-    for (const key of ['freedom', 'cushion', 'future'] as const) {
-      for (const amount of [-10, 0, 0.1, 29.7, 70, 100, 120]) {
-        const result = rebalanceShares(preferences, key, amount)
-        expect(result.freedom + result.cushion + result.future).toBeCloseTo(100, 10)
-        expect(Math.min(result.freedom, result.cushion, result.future)).toBeGreaterThanOrEqual(0)
-      }
-    }
-  })
-  it('displays a complete 100% even when every slice would round down', () => expect(piePercentages([1, 1, 1])).toEqual([33.4, 33.3, 33.3]))
-  it('reconciles chart percentages to 100.0% across small and uneven monetary values', () => {
-    for (let amount = 1; amount <= 300; amount++) {
-      const result = allocateMoney(amount, 17, preferences)
-      const percentages = piePercentages([result.essentials, result.freedom, result.cushion, result.invest])
-      expect(percentages.reduce((sum, value) => sum + Math.round(value * 10), 0)).toBe(1000)
-    }
-  })
-  it('shows no allocation for no money rather than a fictional full pie', () => expect(piePercentages([0, 0, 0, 0])).toEqual([0, 0, 0, 0]))
 })
 
 describe('uploaded statement months', () => {

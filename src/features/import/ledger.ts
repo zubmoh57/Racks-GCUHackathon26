@@ -100,7 +100,7 @@ export function confirmImport(ledger: LedgerState, preview: ImportPreview, optio
     transactions: [...ledger.transactions, ...options.transactions],
     imports: [...ledger.imports, {
       id: preview.id, fingerprint: preview.fingerprint, filename: preview.filename, layout: preview.layout,
-      coverageStart: preview.coverageStart, coverageEnd: preview.coverageEnd,
+      coverageStart: preview.coverageStart, coverageEnd: preview.coverageEnd, openingBalancePence: preview.openingBalancePence,
       transactionIds: options.transactions.map(transaction => transaction.id),
       excludedRows: preview.unresolvedRows.filter(row => excluded.has(row.id)),
     }],

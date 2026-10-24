@@ -26,18 +26,9 @@ export type OpportunityPreview = { id: string; kind: 'discount' | 'alternative' 
 export type SelectedAction = { id: string; opportunityId: string; frequency: 'week' | 'month' | 'one-off'; startDate: string; endDate?: string; selected: boolean; projectedSavingPence?: number }
 export type BudgetSnapshot = { allowancePence: number; remainingPence: number; shortfallPence?: number; asOfDate: string }
 export type GoalSnapshot = { id: string; name: string; targetPence: number; savedPence: number; targetDate?: string; potentialActionPence?: number }
-export type MoneyPlan = {
-  incomePence: number | null
-  essentialsPence: number | null
-  fundingPence: number
-  freedom: number
-  cushion: number
-  future: number
-  investmentReady: boolean
-  goalName: string
-  goalTargetPence: number
-  confirmed: boolean
-}
+/** Ratings run 0-10. `applied` holds the ratings the shown recommendation was calculated from. */
+export type Priorities = { everyday: number; savings: number; investing: number }
+export type MoneyPlan = Priorities & { applied: Priorities | null }
 export type SharedState = {
   route: AppRoute
   transactions: Transaction[]
@@ -65,5 +56,5 @@ export type SharedAction =
   | { type: 'opportunities/replace'; opportunities: OpportunityPreview[] }
   | { type: 'protections/replace'; protections: ProtectionRule[] }
   | { type: 'actions/replace'; selectedActions: SelectedAction[] }
-  | { type: 'planning/preferences'; patch: Partial<MoneyPlan> }
-  | { type: 'planning/confirm'; incomePence: number; essentialsPence: number }
+  | { type: 'planning/priorities'; patch: Partial<Priorities> }
+  | { type: 'planning/calculate' }

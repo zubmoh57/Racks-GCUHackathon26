@@ -53,7 +53,7 @@ Import functions and types from `src/features/import/index.ts`.
 | `removeTransaction(ledger, id)` | Returns a ledger without that transaction. |
 | `summariseTransactions(transactions)` | Spending, refunds, income, funding, withdrawals and category totals, in integer pence. |
 | `parsePounds(text)` | Converts decimal pound text to integer pence without floating point penny errors. |
-| `createSampleStatement()` | Generates a genuine synthetic PDF `File` for the frontend to pass into the normal parser. |
+| `createSampleStatement(monthsBack)` | Generates a genuine synthetic PDF `File` for the frontend to pass into the normal parser, shifted back `monthsBack` whole months. |
 
 All ledger functions return new state; the parent application owns storage and state updates. They do not render UI, navigate, display notifications or save data externally. Catch thrown errors and present them in the teammate's interface.
 

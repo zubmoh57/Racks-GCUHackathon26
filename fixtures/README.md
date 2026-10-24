@@ -20,4 +20,4 @@ To regenerate fixtures in a project with `tsx` installed:
 npx tsx fixtures/generate-statements.ts
 ```
 
-`createSampleStatement()` generates exactly the same genuine PDF file for the frontend teammate to pass into the normal parser. Filename changes alone do not bypass duplicate checks.
+`createSampleStatement(monthsBack)` generates a genuine PDF file for the frontend teammate to pass into the normal parser: the same statement, shifted back that many whole months, so repeated demo imports stack instead of colliding. Filename changes alone do not bypass duplicate checks; the fingerprint comes from the file's own bytes.

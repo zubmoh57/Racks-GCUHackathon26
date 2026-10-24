@@ -12,7 +12,7 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Courier >>
 endobj
 5 0 obj
-<< /Length 1271 >>
+<< /Length 1304 >>
 stream
 BT
 /F1 9 Tf
@@ -26,13 +26,15 @@ T*
 T*
 (Period: 01/10/2026 to 23/10/2026) Tj
 T*
+(Opening balance: 1562.48) Tj
+T*
 (Currency: GBP. All data is synthetic. This is not a real bank statement.) Tj
 T*
 (Date | Description | Money out | Money in) Tj
 T*
 (01/10/2026 | MAINTENANCE FUNDING | | 2400.00) Tj
 T*
-(02/10/2026 | STUDENT RENT | 650.00 |) Tj
+(02/10/2026 | STUDENT RENT | 487.50 |) Tj
 T*
 (03/10/2026 | TESCO GLASGOW | 25.50 |) Tj
 T*
@@ -48,7 +50,7 @@ T*
 T*
 (07/10/2026 | TRANSFER TO OWN SAVINGS | 100.00 |) Tj
 T*
-(08/10/2026 | PART TIME WAGES | | 320.00) Tj
+(08/10/2026 | PART TIME WAGES | | 412.75) Tj
 T*
 (09/10/2026 | BLACK SHEEP COFFEE | 3.60 |) Tj
 T*
@@ -83,5 +85,5 @@ xref
 trailer
 << /Size 6 /Root 1 0 R >>
 startxref
-1631
+1664
 %%EOF
