@@ -47,7 +47,7 @@ export default function Dashboard() {
         <div className={'ratio-summary ' + ratio.tone}><span className="metric-label">SPENDING / INCOME</span><strong>{ratio.percent === null ? '—' : `${ratio.percent.toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`}</strong><span className="status-label">{ratio.label}</span></div>
         <div className="balance-amount spending-amount"><span className="metric-label">SPENDING</span><strong>{money(summary.spending)}</strong><span className="metric-detail">Purchases less {money(summary.refunds)} in refunds</span></div>
       </div>
-      <BalanceStrip rows={state.transactions} month={balanceMonth} />
+      <BalanceStrip rows={state.transactions} imports={state.imports} month={balanceMonth} />
     </section>
     <section className="surface purchases-panel" aria-labelledby="purchases-title">
       <div className="panel-toolbar"><div><h2 id="purchases-title">Your transactions <span className="count-badge">{displayed.length}</span></h2><p className="subtle">Categories are suggestions. Edit anything that doesn’t look right.</p></div><button className="secondary-button" onClick={addCash}>+ Add other expenses</button></div>

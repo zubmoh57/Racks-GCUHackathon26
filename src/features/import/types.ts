@@ -56,6 +56,8 @@ export interface ImportPreview {
   layout: 'campus-v1';
   coverageStart: string;
   coverageEnd: string;
+  /** The balance the statement declares before its first row, when the layout carries one. */
+  openingBalancePence: number | null;
   transactions: Transaction[];
   unresolvedRows: UnresolvedRow[];
 }
@@ -67,6 +69,7 @@ export interface StatementImport {
   layout: 'campus-v1';
   coverageStart: string;
   coverageEnd: string;
+  openingBalancePence: number | null;
   transactionIds: string[];
   excludedRows: UnresolvedRow[];
 }

@@ -42,7 +42,7 @@ export function MoneyPlanPage() {
       </section>
       <section className="surface plan-result" aria-labelledby="plan-result-title">
         <div className="panel-toolbar"><h2 id="plan-result-title">What to put where</h2>{result && <span className="allocation-total">{money(moneyIn)} a month</span>}</div>
-        {latestMonth && <BalanceStrip rows={state.transactions} month={latestMonth} />}
+        {latestMonth && <BalanceStrip rows={state.transactions} imports={state.imports} month={latestMonth} />}
         {result ? <>
           {stale && <p className="allocation-feedback" role="status">Your ratings changed. Calculate again to update these amounts.</p>}
           <div className="allocation-cards">{slices.map(slice => <article className="allocation-card" key={slice.label}>

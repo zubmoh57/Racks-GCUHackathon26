@@ -1,4 +1,4 @@
-import type { Coverage, Priorities, Transaction } from '../../assets/contracts'
+import type { Coverage, Priorities, StatementImport, Transaction } from '../../assets/contracts'
 
 export const money = (pence: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(pence / 100)
 export const dateLabel = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
@@ -23,10 +23,16 @@ export function spendingRatio(spending: number, income: number) {
   return { percent, label: grade[0], tone: grade[1] }
 }
 
+/** Whole calendar months the statements touch, so a part month still counts as one. */
+export function monthsCovered(coverage: Coverage | null) {
+  if (!coverage) return 0
+  const monthNumber = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7))
+  return Math.max(1, monthNumber(coverage.endDate) - monthNumber(coverage.startDate) + 1)
+}
+
 export function monthlyBaseline(rows: readonly Transaction[], coverage: Coverage | null) {
   if (!coverage) return { income: 0, funding: 0, essentials: 0 }
-  const monthNumber = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7))
-  const months = Math.max(1, monthNumber(coverage.endDate) - monthNumber(coverage.startDate) + 1)
+  const months = monthsCovered(coverage)
   const essentialCategories = new Set(rows.filter(row => transactionTone(row) === 'essential').map(row => row.category))
   const essentials = rows.filter(row => transactionTone(row) === 'essential' || row.kind === 'refund' && essentialCategories.has(row.category)).reduce((sum, row) => sum - row.amountPence, 0)
   const summary = totals(rows)
@@ -35,12 +41,28 @@ export function monthlyBaseline(rows: readonly Transaction[], coverage: Coverage
 
 export const coveredMonths = (rows: readonly Transaction[]) => [...new Set(rows.map(row => row.date.slice(0, 7)))].sort()
 
-/** Income less spending, the same two figures the breakdown shows, carried from zero at the first statement. */
-export function monthBalances(rows: readonly Transaction[], month: string) {
+/** The earliest statement's own opening balance anchors the running total; a layout without one starts at zero. */
+export function startingBalance(imports: readonly StatementImport[]): number | null {
+  const earliest = [...imports].sort((a, b) => a.coverageStart.localeCompare(b.coverageStart))[0]
+  return earliest?.openingBalancePence ?? null
+}
+
+/** Income less spending, the same two figures the breakdown shows, run on from the opening balance. */
+export function monthBalances(rows: readonly Transaction[], month: string, startsAt = 0) {
   const flow = (subset: readonly Transaction[]) => { const summary = totals(subset); return summary.income - summary.spending }
   const during = rows.filter(row => row.date.slice(0, 7) === month)
-  const opening = flow(rows.filter(row => row.date.slice(0, 7) < month)), change = flow(during)
+  const opening = startsAt + flow(rows.filter(row => row.date.slice(0, 7) < month)), change = flow(during)
   return { opening, closing: opening + change, change, covered: during.length > 0 }
+}
+
+/** What the same past purchases would have cost at the alternative's own recorded price. */
+export function swapSaving(paidPence: readonly number[], alternativeUnitPence: number) {
+  if (!paidPence.every(amount => Number.isSafeInteger(amount) && amount >= 0)) throw new Error('Use non-negative amounts in pence.')
+  if (!Number.isSafeInteger(alternativeUnitPence) || alternativeUnitPence < 0) throw new Error('Use a non-negative alternative price in pence.')
+  const occurrences = paidPence.length
+  const paid = paidPence.reduce((sum, amount) => sum + amount, 0)
+  /** A dearer alternative is not a saving, so it never reads as a negative one. */
+  return { occurrences, totalSaving: Math.max(0, paid - occurrences * alternativeUnitPence) }
 }
 
 /** Essentials never reserve the last slice, so a plan always has something left to allocate. */

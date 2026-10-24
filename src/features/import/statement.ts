@@ -15,6 +15,8 @@ export function parseStatementLines(lines: readonly ExtractedLine[], fingerprint
   const coverageStart = parseBritishDate(period[1]);
   const coverageEnd = parseBritishDate(period[2]);
   if (coverageEnd < coverageStart) throw new Error('The statement end date is before its start date.');
+  const opening = lines.map(line => /^Opening balance:\s*(-?[\d,]+(?:\.\d{2})?)$/.exec(line.text.trim())).find(Boolean);
+  const openingBalancePence = opening ? parsePounds(opening[1]) : null;
   const header = lines.findIndex(line => line.text.replace(/\s*\|\s*/g, ' | ').trim() === COLUMN_HEADER);
   const end = lines.findIndex((line, index) => index > header && line.text.trim() === 'END OF TRANSACTIONS');
   if (header < 0 || end < 0) throw new Error('The transaction table is incomplete. Check the PDF and try again.');
@@ -46,5 +48,5 @@ export function parseStatementLines(lines: readonly ExtractedLine[], fingerprint
     }
   });
   if (!transactions.length && !unresolvedRows.length) throw new Error('This statement has no transaction rows.');
-  return { id, fingerprint, filename, layout: 'campus-v1', coverageStart, coverageEnd, transactions, unresolvedRows };
+  return { id, fingerprint, filename, layout: 'campus-v1', coverageStart, coverageEnd, openingBalancePence, transactions, unresolvedRows };
 }

@@ -1,11 +1,15 @@
-import type { Transaction } from '../../assets/contracts'
+import type { StatementImport, Transaction } from '../../assets/contracts'
 import { monthLabel } from '../import/statementMonths'
-import { monthBalances, money } from './finance'
+import { monthBalances, money, startingBalance } from './finance'
 
 /** Income less spending, carried month to month. Funding, transfers and withdrawals stay out of it. */
-export function BalanceStrip({ rows, month }: { rows: readonly Transaction[]; month: string }) {
-  const balances = monthBalances(rows, month)
+export function BalanceStrip({ rows, imports, month }: { rows: readonly Transaction[]; imports: readonly StatementImport[]; month: string }) {
+  const startsAt = startingBalance(imports)
+  const balances = monthBalances(rows, month, startsAt ?? 0)
   const name = monthLabel(month)
+  const source = startsAt === null
+    ? 'from £0, because no statement declared an opening balance'
+    : `on from the ${money(startsAt)} opening balance on your earliest statement`
   return <div className="balance-strip" aria-label={`Balance across ${name}`}>
     <span className="balance-strip-label">BALANCE · {name.toUpperCase()}</span>
     <div className="balance-tiles">
@@ -15,7 +19,7 @@ export function BalanceStrip({ rows, month }: { rows: readonly Transaction[]; mo
       <div className={'balance-tile balance-change ' + (balances.change < 0 ? 'down' : 'up')}><span>CHANGE</span><strong>{balances.change > 0 ? '+' : ''}{money(balances.change)}</strong></div>
     </div>
     <small>{balances.covered
-      ? 'Your income less your spending, carried on from £0 at the start of your first statement. Student funding, transfers and cash withdrawals are not counted.'
+      ? `Your income less your spending, carried ${source}. Student funding, transfers and cash withdrawals are not counted.`
       : `No transactions in ${name}.`}</small>
   </div>
 }

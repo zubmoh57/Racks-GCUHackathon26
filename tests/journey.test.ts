@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../src/assets/contracts'
-import { monthBalances, monthlyBaseline, PRIORITY_MAX, recommendAllocation, spendingRatio, totals, transactionTone } from '../src/features/journey/finance'
+import { monthBalances, monthlyBaseline, PRIORITY_MAX, recommendAllocation, spendingRatio, startingBalance, swapSaving, totals, transactionTone } from '../src/features/journey/finance'
 import { isProtected, savingsInput } from '../src/features/journey/savingsAdapter'
 import { monthLabel, statementMonths } from '../src/features/import/statementMonths'
 import type { StatementImport } from '../src/features/import/types'
@@ -39,6 +39,14 @@ describe('income and spending breakdown', () => {
     const rows = [row({ id: 'a', date: '2026-10-01', kind: 'funding', amountPence: 240000 }), row({ id: 'b', date: '2026-10-05', kind: 'cashWithdrawal', amountPence: -4000 }), row({ id: 'c', date: '2026-10-07', kind: 'transfer', amountPence: -10000 })]
     expect(monthBalances(rows, '2026-10')).toEqual({ opening: 0, closing: 0, change: 0, covered: true })
   })
+  it('runs on from the opening balance of the earliest statement, not the first one added', () => {
+    const held = (start: string, openingBalancePence: number | null): StatementImport => ({ id: start, fingerprint: start, filename: 'statement.pdf', layout: 'campus-v1', coverageStart: start, coverageEnd: `${start.slice(0, 7)}-23`, openingBalancePence, transactionIds: [], excludedRows: [] })
+    expect(startingBalance([held('2026-10-01', 156248), held('2026-09-01', 176286)])).toBe(176286)
+    expect(startingBalance([held('2026-10-01', null)])).toBeNull()
+    expect(startingBalance([])).toBeNull()
+    const rows = [row({ id: 'a', date: '2026-09-20', amountPence: -20038 }), row({ id: 'b', date: '2026-10-20', amountPence: -20038 })]
+    expect(monthBalances(rows, '2026-10', 176286)).toMatchObject({ opening: 156248, closing: 136210, change: -20038 })
+  })
   it('nets a refund off the spending it reverses', () => {
     const rows = [row({ date: '2026-10-03', amountPence: -2500 }), row({ id: 'refund', date: '2026-10-06', kind: 'refund', amountPence: 500 })]
     expect(monthBalances(rows, '2026-10').change).toBe(-2000)
@@ -76,6 +84,23 @@ describe('recommended allocation', () => {
     expect(() => recommendAllocation(-1, 0, ratings)).toThrow()
     expect(() => recommendAllocation(100, 0, { ...ratings, everyday: PRIORITY_MAX + 1 })).toThrow()
     expect(() => recommendAllocation(100, 0, { ...ratings, savings: 2.5 })).toThrow()
+  })
+})
+
+describe('swap savings', () => {
+  it('totals what the same purchases would have cost at the alternative price', () => {
+    expect(swapSaving([420, 420, 420, 420, 420, 420], 360)).toEqual({ occurrences: 6, totalSaving: 360 })
+  })
+  it('counts the whole spend when the alternative is free', () => {
+    expect(swapSaving([1299, 1299, 1299], 0)).toEqual({ occurrences: 3, totalSaving: 3897 })
+  })
+  it('never reports a dearer alternative as a negative saving', () => {
+    expect(swapSaving([300, 300], 500)).toEqual({ occurrences: 2, totalSaving: 0 })
+  })
+  it('has nothing to total without recorded purchases', () => expect(swapSaving([], 360)).toEqual({ occurrences: 0, totalSaving: 0 }))
+  it('rejects invalid amounts', () => {
+    expect(() => swapSaving([-1], 0)).toThrow()
+    expect(() => swapSaving([100], -1)).toThrow()
   })
 })
 

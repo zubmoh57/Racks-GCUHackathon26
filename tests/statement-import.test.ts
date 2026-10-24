@@ -43,14 +43,15 @@ describe('statement layout and financial totals', () => {
     const summary = summariseTransactions(preview.transactions);
     expect(preview.transactions).toHaveLength(18);
     expect(preview.unresolvedRows).toEqual([]);
-    expect(summary).toMatchObject({ grossSpendingPence: 78063, refundsPence: 500, netSpendingPence: 77563, incomePence: 32000, fundingPence: 240000, cashWithdrawalsPence: 4000 });
-    expect(summary.categoryTotals).toEqual({ housing: 65000, groceries: 3825, foodAndDrink: 2300, subscriptions: 599, shopping: 1299, transport: 340, bills: 4200, other: 0 });
+    expect(summary).toMatchObject({ grossSpendingPence: 61813, refundsPence: 500, netSpendingPence: 61313, incomePence: 41275, fundingPence: 240000, cashWithdrawalsPence: 4000 });
+    expect(preview.openingBalancePence).toBe(156248);
+    expect(summary.categoryTotals).toEqual({ housing: 48750, groceries: 3825, foodAndDrink: 2300, subscriptions: 599, shopping: 1299, transport: 340, bills: 4200, other: 0 });
     expect(preview.transactions.filter(item => item.date === '2026-10-22')).toHaveLength(2);
     expect(preview.transactions.every(item => !item.confirmedItem)).toBe(true);
   });
   it('reads changed contents, never a filename-based sample lookup', () => {
     const changed = SAMPLE_STATEMENT_LINES.map(line => line.replace('24.50', '25.50'));
-    expect(summariseTransactions(parse(changed).transactions).netSpendingPence).toBe(77663);
+    expect(summariseTransactions(parse(changed).transactions).netSpendingPence).toBe(61413);
   });
   it('surfaces invalid dates, dual amounts, missing descriptions and unknown rows', () => {
     const bad = [...SAMPLE_STATEMENT_LINES];
@@ -98,6 +99,8 @@ describe('review and confirmation', () => {
     expect(sampleStatementLines(1)).toContain('Period: 01/09/2026 to 23/09/2026');
     expect(sampleStatementLines(10)).toContain('Period: 01/12/2025 to 23/12/2025');
     expect(sampleStatementFilename(1)).toBe('campus-demo-statement-2026-09.pdf');
+    expect(sampleStatementLines(1)).toContain('Opening balance: 1762.86');
+    expect(sampleStatementLines(2)).toContain('Opening balance: 1963.24');
     const october = parse();
     const september = parse(sampleStatementLines(1), 'fixture-september');
     const ledger = confirmImport(empty(), october, { transactions: october.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] });
@@ -126,11 +129,11 @@ describe('manual expenses', () => {
     const preview = parse();
     const ledger = confirmImport(empty(), preview, { transactions: preview.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] });
     const withCash = upsertManualExpense(ledger, cash());
-    expect(summariseTransactions(withCash.transactions).netSpendingPence).toBe(77863);
+    expect(summariseTransactions(withCash.transactions).netSpendingPence).toBe(61613);
     const edited = upsertManualExpense(withCash, cash(-450));
     expect(edited.transactions).toHaveLength(19);
-    expect(summariseTransactions(edited.transactions).netSpendingPence).toBe(78013);
-    expect(summariseTransactions(removeTransaction(edited, 'cash:1').transactions).netSpendingPence).toBe(77563);
+    expect(summariseTransactions(edited.transactions).netSpendingPence).toBe(61763);
+    expect(summariseTransactions(removeTransaction(edited, 'cash:1').transactions).netSpendingPence).toBe(61313);
   });
   it('cannot overwrite a statement entry through the cash form', () => {
     const ledger = { transactions: [{ ...cash(), source: 'statement' as const }], imports: [] };
@@ -148,7 +151,7 @@ describe('Racks frontend integration', () => {
     const ledger = confirmImport(empty(), preview, { transactions: preview.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] });
     const action = ledgerReplacement(ledger);
     expect(action.coverage).toEqual({ startDate: '2026-10-01', endDate: '2026-10-23', statementCount: 1 });
-    expect(action.transactions[1]).toMatchObject({ category: 'Rent & housing', amountPence: -65000, sourceRow: ledger.transactions[1].sourceRow });
+    expect(action.transactions[1]).toMatchObject({ category: 'Rent & housing', amountPence: -48750, sourceRow: ledger.transactions[1].sourceRow });
     const restored = getImportLedger({ transactions: action.transactions, imports: action.imports!, isDemoData: false });
     expect(restored).toEqual(ledger);
     expect(() => confirmImport(restored, preview, { transactions: preview.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] })).toThrow(/already/);

@@ -2,15 +2,16 @@
   "currency": "GBP",
   "period": { "start": "2026-10-01", "end": "2026-10-23" },
   "transactionCount": 18,
-  "grossSpendingPence": 78063,
+  "openingBalancePence": 156248,
+  "grossSpendingPence": 61813,
   "refundsPence": 500,
-  "netSpendingPence": 77563,
-  "incomePence": 32000,
+  "netSpendingPence": 61313,
+  "incomePence": 41275,
   "fundingPence": 240000,
   "cashWithdrawalsPence": 4000,
   "ownAccountTransferOutPence": 10000,
   "categoryTotalsPence": {
-    "housing": 65000,
+    "housing": 48750,
     "groceries": 3825,
     "foodAndDrink": 2300,
     "subscriptions": 599,
@@ -19,6 +20,6 @@
     "bills": 4200,
     "other": 0
   },
-  "changedAmountNetSpendingPence": 77663,
-  "afterThreePoundCashPurchaseNetSpendingPence": 77863
+  "changedAmountNetSpendingPence": 61413,
+  "afterThreePoundCashPurchaseNetSpendingPence": 61613
 }
