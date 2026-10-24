@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "npm run test:import && npm run test:savings && npm run test:planning",
-    "test:import": "vitest run tests/statement-import.test.ts",
+    "test:import": "vitest run tests/statement-import.test.ts tests/journey.test.ts",
     "test:savings": "node savings/test/run-tests.mjs",
     "test:planning": "node --import tsx --test tests/calculators.test.mjs",
     "lint": "eslint .",

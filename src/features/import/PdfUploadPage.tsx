@@ -107,10 +107,15 @@ export function PdfUploadPage() {
     const attempt = ++request.current;
     setBusy(true); setError(''); setFilename(file.name);
     try {
-      const next = await parseStatement(file);
+      const [next] = await Promise.all([parseStatement(file), new Promise(resolve => window.setTimeout(resolve, 850))]);
       if (attempt !== request.current) return;
       if (ledger.imports.some(item => item.fingerprint === next.fingerprint)) throw new Error('This statement is already in your records. It hasn’t been added again.');
-      setPreview(next);
+      if (next.unresolvedRows.length || possibleDuplicateIds(next.transactions, ledger.transactions).length) {
+        setPreview(next);
+      } else {
+        dispatch(ledgerReplacement(confirmImport(ledger, next, { transactions: next.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] })));
+        dispatch({ type: 'navigation/go', route: 'dashboard' });
+      }
     } catch (problem) { if (attempt === request.current) setError(problem instanceof Error ? problem.message : 'This PDF could not be read. Try the sample statement.'); }
     finally { if (attempt === request.current) setBusy(false); }
   }
@@ -123,30 +128,22 @@ export function PdfUploadPage() {
   }
 
   return <div className="pdf-import">
-    <section className="dashboard-heading"><div><p className="eyebrow">MORROW / YOUR TRANSACTIONS</p><h1>Your spending,<br /><span>made clear.</span></h1><p className="dashboard-intro">Bring your statement, check the details, and see where your money went. One small step towards feeling more in control.</p></div><div className="reporting-chip"><span className="reporting-icon" aria-hidden="true">↥</span><span><small>{preview ? 'Statement period' : 'Your data'}</small><b>{preview ? `${dateLabel(preview.coverageStart)} – ${dateLabel(preview.coverageEnd)}` : 'Read on this device'}</b></span></div></section>
-    <ol className="pdf-progress" aria-label="Statement import progress"><li className={!preview ? 'current' : 'complete'} aria-current={!preview ? 'step' : undefined}><span>{preview ? '✓' : '1'}</span>Upload a statement</li><li className={preview ? 'current' : ''} aria-current={preview ? 'step' : undefined}><span>2</span>Check the details</li><li><span>3</span>See your spending</li></ol>
-    {preview ? <StatementReview key={preview.id} preview={preview} ledger={ledger} onCancel={() => { setPreview(null); setError(''); }} onCommit={next => { dispatch(ledgerReplacement(next)); dispatch({ type: 'navigation/go', route: 'dashboard' }); }} /> : <>
-      {ledger.imports.length > 0 && <div className="demo-banner pdf-connected"><span className="pdf-connected-mark" aria-hidden="true">✓</span><div><b>{ledger.imports.length} statement{ledger.imports.length === 1 ? '' : 's'} connected</b><p>{ledger.transactions.length} reviewed entries are already in your overview. Another statement will add to these records.</p></div><button type="button" onClick={() => dispatch({ type: 'navigation/go', route: 'dashboard' })}>Open overview <span aria-hidden="true">→</span></button></div>}
-      <div className="pdf-upload-layout">
-        <section className="surface pdf-upload-card" aria-labelledby="pdf-upload-title">
-          <div className="section-heading"><div><p className="eyebrow">BRING IT ALL TOGETHER</p><h2 id="pdf-upload-title">Add your statement</h2></div><span className="pdf-badge">PDF</span></div>
-          <p className="pdf-muted">Start with the sample statement format for this preview. Other bank layouts aren’t supported yet.</p>
-          <label className={'pdf-dropzone' + (dragging ? ' dragging' : '') + (busy ? ' reading' : '')} htmlFor={id} onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={drop}>
-            <input className="pdf-sr-only" id={id} type="file" accept="application/pdf,.pdf" disabled={busy} aria-describedby={`${id}-limits`} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void read(file); }} />
-            <span className="pdf-file-icon" aria-hidden="true"><svg width="32" height="38" viewBox="0 0 32 38" fill="none"><path d="M6 1h13l7 7v27a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.5" /><path d="M19 1v8h7M10 18h10M10 23h7M10 28h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>PDF</span></span>
-            <strong>{busy ? 'Reading your statement…' : 'Drop your statement here'}</strong><span>{busy ? filename : 'or browse your files to get started'}</span><span className="pdf-choose">{busy ? 'Working on it…' : 'Choose PDF'}<span aria-hidden="true">↥</span></span><small id={`${id}-limits`}>Text-based PDF · Up to 10 MB · 20 pages</small>
-          </label>
-          {busy && <p className="pdf-message pdf-info" role="status">Extracting text from {filename}. Your file stays on this device.</p>}
-          {error && <p className="pdf-message pdf-error" role="alert">{error}</p>}
-          <div className="pdf-private-note"><span className="pdf-private-mark" aria-hidden="true">✓</span><div><b>Your statement stays yours.</b><p>Read locally, never uploaded. You’ll review every entry before it reaches your overview.</p></div></div>
-        </section>
-        <aside className="pdf-side-column">
-          <section className="surface pdf-how-card"><p className="eyebrow">A LITTLE CLARITY GOES A LONG WAY</p><h2>A few steps.<br />A clearer picture.</h2><ol><li><span>01</span><div><b>Bring your statement</b><p>A PDF is all you need to get started.</p></div></li><li><span>02</span><div><b>Make sure it looks right</b><p>Check dates, categories and anything we couldn’t read.</p></div></li><li><span>03</span><div><b>Find your next small step</b><p>See your spending in Morrow’s overview.</p></div></li></ol></section>
-          <section className="surface pdf-sample-card"><span className="tool-icon tool-mint" aria-hidden="true">✦</span><h3>Just looking around?</h3><p>Try a fictional student statement. Same real parsing, with no personal information.</p><button className="pdf-button pdf-secondary" type="button" disabled={busy} onClick={() => void read(createSampleStatement())}>Try sample PDF <span aria-hidden="true">→</span></button><button className="text-link pdf-download" type="button" onClick={downloadSample}>Download sample statement <span aria-hidden="true">↗</span></button></section>
-        </aside>
-      </div>
-      {ledger.imports.length > 0 && <details className="surface pdf-records"><summary>Your connected statements <span>{ledger.imports.length}</span></summary><ul>{ledger.imports.map(item => <li key={item.id}><div><b>{item.filename}</b><small>{dateLabel(item.coverageStart)} – {dateLabel(item.coverageEnd)}{item.excludedRows.length ? ` · ${item.excludedRows.length} unreadable row(s) excluded` : ''}</small></div><span className="pdf-badge">Reviewed</span></li>)}</ul></details>}
-    </>}
-    <footer className="dashboard-footer pdf-footer"><span>Made for real student life.</span><span>Session only. Refreshing clears your imported data.</span></footer>
+    <div className="page-heading"><div><p className="step-kicker">STEP 01 / GET STARTED</p><h1>Upload your bank statement.</h1><p>See your spending, income and next steps.</p></div><span className="heading-tag">PDF → your breakdown</span></div>
+    {preview ? <StatementReview key={preview.id} preview={preview} ledger={ledger} onCancel={() => { setPreview(null); setError(''); }} onCommit={next => { dispatch(ledgerReplacement(next)); dispatch({ type: 'navigation/go', route: 'dashboard' }); }} /> :
+      <section className="surface pdf-upload-card" aria-labelledby="pdf-upload-title" aria-busy={busy}>
+        <div className="upload-card-top"><div><span className="file-type-label">PDF STATEMENT</span><h2 id="pdf-upload-title">Add your statement</h2></div><span className="local-badge"><span aria-hidden="true">✓</span> Processed on your device</span></div>
+        <label className={'pdf-dropzone' + (dragging ? ' dragging' : '') + (busy ? ' reading' : '')} htmlFor={id} onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={drop}>
+          <input className="pdf-sr-only" id={id} type="file" accept="application/pdf,.pdf" disabled={busy} aria-describedby={`${id}-limits`} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void read(file); }} />
+          <span className="pdf-file-icon" aria-hidden="true"><svg width="42" height="50" viewBox="0 0 32 38" fill="none"><path d="M6 1h13l7 7v27a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.5"/><path d="M19 1v8h7M10 18h10M10 23h7M10 28h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg><span>PDF</span></span>
+          <strong>{busy ? 'Reading your statement…' : 'Drag and drop your PDF here'}</strong>
+          <span>{busy ? filename : 'or choose a file from your device'}</span>
+          {busy ? <span className="scan-track" aria-hidden="true"><i /></span> : <span className="pdf-choose">Choose a PDF <span aria-hidden="true">↑</span></span>}
+          <small id={`${id}-limits`}>Text-based PDF · Up to 10 MB · 20 pages</small>
+        </label>
+        {busy && <p className="processing-status" role="status">Reading transactions → sorting your spending → building your breakdown</p>}
+        {error && <p className="pdf-message pdf-error" role="alert">{error}</p>}
+        <div className="upload-bottom"><p>Campus demo format supported for now. Other bank layouts and scanned PDFs aren’t supported yet.</p><div><button className="text-link" type="button" disabled={busy} onClick={() => void read(createSampleStatement())}>Use demo statement</button><span aria-hidden="true">·</span><button className="text-link" type="button" onClick={downloadSample}>Download sample PDF</button></div></div>
+        {ledger.imports.length > 0 && <div className="imported-note"><span>✓ {ledger.imports.length} statement{ledger.imports.length === 1 ? '' : 's'} added. Uploading another adds to your records.</span><button className="text-link" onClick={() => dispatch({ type: 'navigation/go', route: 'dashboard' })}>Continue to breakdown →</button></div>}
+      </section>}
   </div>;
 }

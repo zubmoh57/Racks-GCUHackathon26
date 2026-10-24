@@ -2,6 +2,12 @@
 
 Planning handoff, 24 October 2026, updated for a fifth team member. This document describes the team plan; implementation status and integration instructions for the import module live in `src/features/import/README.md`. Give this whole file to each teammate's coding assistant, then assign one of the five roles below.
 
+## Latest user-approved UI direction
+
+After merging every branch into `main`, the user requested a four-page redesign: upload PDF first; income, spending, ratio and editable purchases second; savings comparisons and student discounts third; monthly allocation sliders and a pie chart fourth. Use the Amazon reference's navy header, white panels, grey background and orange accents. Each page has one or two main blocks. The old marketing sections and placeholder feature pages are removed. This explicit request expands the earlier upload-only frontend scope.
+
+The app now connects the savings engine through a signed-pence/refund/protection adapter and reuses the original planning contribution calculator. The full original planning panel and independent demos are retained. See the root README for the implemented flow and prototype limitations. The ratio grades are product heuristics; item prices cannot be inferred from merchants. Student funding remains separate from wages, and the monthly plan reserves essentials before sharing any surplus. Prioritisation sliders affect hypothetical allocations, never bank balances or realised savings.
+
 ## 1. Confirmed brief and constraints
 
 - Five people (originally four), with approximately five hours available when planning began. All have AI coding tools.

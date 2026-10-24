@@ -1,10 +1,10 @@
 # PDF upload, review and ledger logic - Zubair / role B
 
-This module supplies the PDF upload/review page and its parsing/ledger functions. The upload page uses Blazej's Morrow shell, teal theme and existing light/dark toggle. The dashboard, other screens and manual-spending interface remain with their frontend owner. This scoped upload UI was added at the user's request after the frontend branch became available.
+This module supplies the PDF upload/review page and its parsing/ledger functions. The user subsequently requested a complete four-page flow and an Amazon-inspired navy/white/orange theme. The main app now opens here with an empty ledger; the breakdown includes manual cash spending and transaction corrections.
 
 ## Scope
 
-- PDF drag/drop or file selection, sample PDF download, editable review and confirmation into the existing dashboard.
+- PDF drag/drop or file selection, sample PDF download, automatic transition for readable statements, and explicit review when rows are unreadable or overlap existing records.
 - Local PDF text extraction with PDF.js and one documented **Campus v1** adapter.
 - Structured review data: editable transactions, original row references and unresolved rows.
 - Confirmation rules: validate edits, require explicit repair/exclusion of unreadable rows, prevent exact-file duplicate imports and flag possible overlapping transactions.
@@ -13,9 +13,9 @@ This module supplies the PDF upload/review page and its parsing/ledger functions
 
 ## Morrow app integration
 
-Blazej's frontend commit `c240774` was merged into `zubair-branch` as the base for this page. `App.tsx` connects the existing Transactions route to `PdfUploadPage.tsx`. `pdf-upload.css` reuses the shell's palette, surfaces and theme toggle; reduced-motion rules are scoped to this route.
+Blazej's frontend was the original base. After all branches were merged into `main`, the user requested the upload-first redesign. `App.tsx` connects the first journey step to `PdfUploadPage.tsx`. `pdf-upload.css` matches the shared navy/white/orange shell; the app respects reduced-motion preferences throughout.
 
-`frontendAdapter.ts` connects the canonical parser ledger to the existing shell's `ledger/replace` action. It displays readable category labels without changing signed pence, retains row references and file fingerprints, and derives coverage from imported periods and recorded dates. Demo dashboard rows are not imported as personal transactions. Confirmation replaces the demo data; later imports add to reviewed records.
+`frontendAdapter.ts` connects the canonical parser ledger to the shell's `ledger/replace` action. It displays readable category labels without changing signed pence, retains row references and file fingerprints, and derives coverage from imported periods and recorded dates. The app starts without demo rows. Clean statements are validated and added automatically; unreadable rows or potential overlaps pause for repair/exclusion or duplicate decisions. Later imports add to the same ledger.
 
 `SharedState.imports` retains import metadata across navigation. The shell's exported `StatementImport` now aliases the parser's canonical record, so there is one fingerprint/coverage schema. The shared source-row type accepts text references as well as numeric references. The page keeps only unconfirmed review edits locally; the app store owns committed transactions. Nothing is sent to a server or persisted across a refresh.
 
@@ -26,7 +26,7 @@ npm install
 npm run dev
 ```
 
-Open the printed local URL and choose **Transactions**. Other app feature slots are not implemented by this upload task.
+Open the printed local URL. Upload a supported PDF or choose **Use demo statement**. The breakdown, savings/discounts and monthly plan follow as steps two through four.
 
 **Arbitrary real bank PDFs are not supported yet.** A real bank's agreed layout needs its own adapter. Scanned/image-only files require OCR, which is outside this version.
 
@@ -126,6 +126,6 @@ See the [fixture guide](../../../fixtures/README.md). The base PDF has 18 transa
 npx vitest run tests/statement-import.test.ts
 ```
 
-The app now includes the test runner. Run `npm test` for all 23 tests, including adapter checks for replacing demo data, preserving source references, retaining duplicate fingerprints across navigation and passing accurate dates/categories to the existing dashboard. `npm run build` runs the app's TypeScript and production bundle checks.
+The app includes the test runner. `tests/statement-import.test.ts` contains 23 core parser/ledger/adapter checks. `npm test` also runs journey calculations and savings integration tests, the savings engine suite and the original planning suite. `npm run build` runs the app's TypeScript and production bundle checks.
 
 Role E owns integrated UI testing with the frontend teammate: real PDF upload, review correction, explicit unreadable-row repair/exclusion, duplicate decisions, cash changes updating the dashboard and production worker loading. Also test unsupported/no-text PDFs, a password-protected PDF and a renamed non-PDF. The individual encrypted-file case still needs a dedicated fixture check.

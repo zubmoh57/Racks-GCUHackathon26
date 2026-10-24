@@ -1,11 +1,11 @@
 import { useReducer, type ReactNode } from 'react'
 import type { SharedAction, SharedState } from './src/assets/contracts'
 import { StateContext } from './stateContext'
-import { demoCoverage, demoTransactions } from './src/assets/demoData'
 
 const initialState: SharedState = {
-  route: 'dashboard', transactions: demoTransactions, imports: [], coverage: demoCoverage, isDemoData: true,
-  period: 'week', periodOffset: 0, selectedDate: null, budget: null, goal: null, opportunities: [], protections: [], selectedActions: [],
+  route: 'import', transactions: [], imports: [], coverage: null, isDemoData: false,
+  period: 'month', periodOffset: 0, selectedDate: null, budget: null, goal: null, opportunities: [], protections: [], selectedActions: [],
+  moneyPlan: { incomePence: null, essentialsPence: null, fundingPence: 0, freedom: 50, cushion: 35, future: 15, investmentReady: false },
 }
 function reducer(state: SharedState, action: SharedAction): SharedState {
   switch (action.type) {
@@ -19,6 +19,7 @@ function reducer(state: SharedState, action: SharedAction): SharedState {
     case 'opportunities/replace': return { ...state, opportunities: action.opportunities }
     case 'protections/replace': return { ...state, protections: action.protections }
     case 'actions/replace': return { ...state, selectedActions: action.selectedActions }
+    case 'planning/preferences': return { ...state, moneyPlan: { ...state.moneyPlan, ...action.patch } }
     default: return state
   }
 }
