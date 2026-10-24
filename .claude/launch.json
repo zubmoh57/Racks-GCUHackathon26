@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "savings-demo",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4178", "--directory", "/Users/avi/Documents/My Softwares/Claude Code/CaledoniaHackathon26"],
+      "port": 4178,
+      "url": "http://localhost:4178"
+    }
+  ]
+}

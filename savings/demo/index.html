@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Savings Recommendations</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Student Ledger</p>
+      <h1>Ways to save</h1>
+      <p class="lede">Built from your statement. Nothing here is a telling-off — the things you told us to protect stay protected.</p>
+    </div>
+    <label class="upload">
+      <input type="file" id="file-input" accept="application/json" hidden>
+      <span>Upload a statement</span>
+    </label>
+  </header>
+
+  <section class="totals" id="totals" aria-label="Summary"></section>
+
+  <div class="columns">
+    <main class="column-main">
+      <h2 class="section-title">Recommendations</h2>
+      <p class="section-note" id="protected-note"></p>
+      <div id="recommendations" class="cards"></div>
+    </main>
+
+    <aside class="column-side">
+      <section class="panel">
+        <h2 class="section-title">Protected treats</h2>
+        <p class="section-note">Spending in here is invisible to the recommendations. Nothing you protect will ever be suggested away.</p>
+        <div id="treats" class="treats"></div>
+        <form id="treat-form" class="treat-form">
+          <label for="treat-label">Protect something</label>
+          <input id="treat-label" type="text" placeholder="e.g. my Friday takeaway" required>
+          <div class="row">
+            <input id="treat-match" type="text" placeholder="matches: costa, coffee" required>
+            <input id="treat-cap" type="number" min="0" step="1" placeholder="cap £">
+          </div>
+          <button type="submit">Protect it</button>
+        </form>
+        <div id="suggested-treats" class="suggested"></div>
+      </section>
+
+      <section class="panel">
+        <h2 class="section-title">Selected actions</h2>
+        <div id="progress" class="progress"></div>
+        <div id="actions" class="actions"></div>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="footnote">
+    Savings estimates are indicative. Offers marked <span class="pill pill-check">check yours</span> vary between universities and councils.
+  </footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
