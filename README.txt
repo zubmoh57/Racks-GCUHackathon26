@@ -1,7 +1,5 @@
-Morrow dashboard update
+Typography update
 
-This package adds a persistent light/dark mode toggle, increases the text size for easier reading, and animates the content when switching between navigation tabs. The dashboard layout stays in place.
+This replaces App.css with a small readability increase across headings, labels, transaction rows, and buttons. It preserves the current layout, dark mode, and tab transitions.
 
-Extract this ZIP into C:\blackrock_hackathon\CaledoniaHackathon26 and choose Replace the files if prompted. Then refresh the app in your browser. If the dev server is stopped, open the project terminal and run npm run dev.
-
-The ZIP replaces App.tsx, Dashboard.tsx, App.css, and index.css.
+Extract this ZIP into C:\blackrock_hackathon\CaledoniaHackathon26 and choose Replace the files. Then refresh the app in your browser.

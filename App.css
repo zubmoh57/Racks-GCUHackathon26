@@ -252,3 +252,30 @@ button:focus-visible{outline:3px solid #55b8b4;outline-offset:2px}
 @keyframes nav-arrive{0%{transform:translateY(2px);box-shadow:0 0 0 0 #0e85872b}100%{transform:translateY(0);box-shadow:0 0 0 5px transparent}}
 .dark-mode .page-transition::before{background:linear-gradient(90deg,transparent,#55d3bd 24%,#70b9df 72%,transparent)}
 @media(prefers-reduced-motion:reduce){.page-transition{animation:tab-arrive .2s ease-out both!important}.page-transition::before{animation:none!important;opacity:0!important}.nav-link.active{animation:none!important}}
+/* Readability pass */
+.nav-link{font-size:14px}
+.privacy-pill,.theme-toggle{font-size:11px}
+.eyebrow{font-size:11px;letter-spacing:1px}
+.dashboard-heading h1{font-size:42px}
+.dashboard-intro{font-size:15px}
+.reporting-chip small{font-size:10px}
+.reporting-chip b{font-size:12px}
+.demo-banner b{font-size:11px}
+.demo-banner p,.demo-banner button{font-size:10px}
+.summary-label{font-size:10px}
+.summary-period{font-size:8px}
+.summary-card>strong{font-size:30px}
+.summary-primary>strong{font-size:34px}
+.summary-foot{font-size:10px}
+.section-heading h2,.tools-heading h2{font-size:19px}
+.period-picker button,.chart-meta,.axis-labels,.bar-column small,.chart-foot{font-size:10px}
+.category-name,.category-row>b,.text-link,.transaction-detail b,.transaction-amount{font-size:11px}
+.transaction-detail small,.tool-copy small{font-size:9px}
+.tool-copy b{font-size:12px}
+.tool-copy em,.dashboard-footer{font-size:10px}
+.clear-filter{font-size:9px}
+.module-page h1{font-size:40px}
+.module-intro{font-size:15px}
+.handoff-card b,.handoff-card p{font-size:11px}
+@media(max-width:780px){.nav-link{font-size:13px}}
+@media(max-width:560px){.dashboard-heading h1{font-size:35px}.dashboard-intro,.module-intro{font-size:14px}.summary-label{font-size:9px}.summary-card>strong{font-size:27px}.summary-primary>strong{font-size:30px}.summary-foot{font-size:8px}.section-heading h2,.tools-heading h2{font-size:17px}.category-name,.category-row>b,.text-link,.transaction-detail b,.transaction-amount{font-size:10px}.transaction-detail small,.tool-copy small{font-size:8px}.tool-copy b{font-size:11px}.tool-copy em,.dashboard-footer{font-size:9px}}
