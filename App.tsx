@@ -3,6 +3,7 @@ import { AppStateProvider } from './state'
 import { useAppState } from './useAppState'
 import type { AppRoute } from './src/assets/contracts'
 import Dashboard from './Dashboard'
+import { PdfUploadPage } from './src/features/import/PdfUploadPage'
 import './App.css'
 
 const navigation: { route: AppRoute; icon: string; label: string }[] = [
@@ -12,14 +13,12 @@ const navigation: { route: AppRoute; icon: string; label: string }[] = [
   { route: 'planning', icon: '◎', label: 'Budget & goals' },
 ]
 
-function ModulePage({ route }: { route: AppRoute }) {
+function ModulePage({ route }: { route: Exclude<AppRoute, 'dashboard' | 'import'> }) {
   const { dispatch } = useAppState()
   const detail =
-    route === 'import'
-      ? { owner: 'ZUBAIR · STATEMENT & LEDGER', title: 'Your transactions, in one place.', copy: 'Import, review, and add spending here. Check every row before it joins your overview.', icon: '↥' }
-      : route === 'opportunities'
-        ? { owner: 'AVI · PRACTICAL SAVINGS', title: 'Small ideas that add up.', copy: 'Explore sourced offers and choose actions that fit your life. Your favourite treats stay part of your plan.', icon: '✳' }
-        : { owner: 'CHIRAG · BUDGET & GOALS', title: 'Make a plan that feels doable.', copy: 'Set a budget, build a savings goal, and see optional illustrations for the choices you make.', icon: '◎' }
+    route === 'opportunities'
+      ? { owner: 'AVI · PRACTICAL SAVINGS', title: 'Small ideas that add up.', copy: 'Explore sourced offers and choose actions that fit your life. Your favourite treats stay part of your plan.', icon: '✳' }
+      : { owner: 'CHIRAG · BUDGET & GOALS', title: 'Make a plan that feels doable.', copy: 'Set a budget, build a savings goal, and see optional illustrations for the choices you make.', icon: '◎' }
 
   return (
     <section className="module-page">
@@ -100,7 +99,7 @@ function AppShell() {
       <main className="main-area">
         <div className="page-wrap">
           <div className="page-transition" key={state.route}>
-            {state.route === 'dashboard' ? <Dashboard /> : <ModulePage route={state.route} />}
+            {state.route === 'dashboard' ? <Dashboard /> : state.route === 'import' ? <PdfUploadPage /> : <ModulePage route={state.route} />}
           </div>
         </div>
       </main>

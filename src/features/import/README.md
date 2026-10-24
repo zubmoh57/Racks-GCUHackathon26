@@ -1,14 +1,32 @@
-# Statement parsing and ledger logic - Zubair / role B
+# PDF upload, review and ledger logic - Zubair / role B
 
-This module supplies TypeScript data functions and fixtures. The frontend teammate owns all screens, forms, styling, animations and navigation. There are no React components or styles in this module.
+This module supplies the PDF upload/review page and its parsing/ledger functions. The upload page uses Blazej's Morrow shell, teal theme and existing light/dark toggle. The dashboard, other screens and manual-spending interface remain with their frontend owner. This scoped upload UI was added at the user's request after the frontend branch became available.
 
 ## Scope
 
+- PDF drag/drop or file selection, sample PDF download, editable review and confirmation into the existing dashboard.
 - Local PDF text extraction with PDF.js and one documented **Campus v1** adapter.
 - Structured review data: editable transactions, original row references and unresolved rows.
 - Confirmation rules: validate edits, require explicit repair/exclusion of unreadable rows, prevent exact-file duplicate imports and flag possible overlapping transactions.
 - Manual cash expense validation, add/edit/delete and spending totals.
-- Five synthetic PDF fixtures, expected totals and 20 unit tests.
+- Five synthetic PDF fixtures, expected totals and 23 unit/integration tests.
+
+## Morrow app integration
+
+Blazej's frontend commit `c240774` was merged into `zubair-branch` as the base for this page. `App.tsx` connects the existing Transactions route to `PdfUploadPage.tsx`. `pdf-upload.css` reuses the shell's palette, surfaces and theme toggle; reduced-motion rules are scoped to this route.
+
+`frontendAdapter.ts` connects the canonical parser ledger to the existing shell's `ledger/replace` action. It displays readable category labels without changing signed pence, retains row references and file fingerprints, and derives coverage from imported periods and recorded dates. Demo dashboard rows are not imported as personal transactions. Confirmation replaces the demo data; later imports add to reviewed records.
+
+`SharedState.imports` retains import metadata across navigation. The shell's exported `StatementImport` now aliases the parser's canonical record, so there is one fingerprint/coverage schema. The shared source-row type accepts text references as well as numeric references. The page keeps only unconfirmed review edits locally; the app store owns committed transactions. Nothing is sent to a server or persisted across a refresh.
+
+From the project root:
+
+```sh
+npm install
+npm run dev
+```
+
+Open the printed local URL and choose **Transactions**. Other app feature slots are not implemented by this upload task.
 
 **Arbitrary real bank PDFs are not supported yet.** A real bank's agreed layout needs its own adapter. Scanned/image-only files require OCR, which is outside this version.
 
@@ -16,7 +34,7 @@ This module supplies TypeScript data functions and fixtures. The frontend teamma
 
 The app owner adds `pdfjs-dist@5.6.205` to the main app's dependencies. It was verified with Node 20.20.2, TypeScript 5.9 and Vite 8.3.5. The parser uses browser `File` and Web Crypto APIs and runs on-device; it is not a server endpoint.
 
-The PDF worker uses Vite's `?url` asset import. A different bundler needs its equivalent local worker configuration. Keep the API and worker from the same package version. No React or React DOM dependency is required by this module.
+The PDF worker uses Vite's `?url` asset import. A different bundler needs its equivalent local worker configuration. Keep the API and worker from the same package version. Parsing and ledger functions remain independent of React; the upload page uses the app's existing React setup.
 
 ## Functions for the frontend teammate
 
@@ -108,6 +126,6 @@ See the [fixture guide](../../../fixtures/README.md). The base PDF has 18 transa
 npx vitest run tests/statement-import.test.ts
 ```
 
-The isolated local verification tools remain outside this checkout, under `../.dist/statement-import-check`, and now typecheck, test and build the utility library only. The earlier temporary React preview was removed at the user's request.
+The app now includes the test runner. Run `npm test` for all 23 tests, including adapter checks for replacing demo data, preserving source references, retaining duplicate fingerprints across navigation and passing accurate dates/categories to the existing dashboard. `npm run build` runs the app's TypeScript and production bundle checks.
 
 Role E owns integrated UI testing with the frontend teammate: real PDF upload, review correction, explicit unreadable-row repair/exclusion, duplicate decisions, cash changes updating the dashboard and production worker loading. Also test unsupported/no-text PDFs, a password-protected PDF and a renamed non-PDF. The individual encrypted-file case still needs a dedicated fixture check.

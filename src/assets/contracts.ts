@@ -1,3 +1,5 @@
+import type { StatementImport as ImportRecord } from '../features/import/types'
+
 export type TransactionKind = 'expense' | 'income' | 'funding' | 'refund' | 'transfer' | 'cashWithdrawal'
 export type TransactionSource = 'statement' | 'manual'
 export type Transaction = {
@@ -11,12 +13,12 @@ export type Transaction = {
   category: string
   source: TransactionSource
   importId?: string
-  sourceRow?: number
+  sourceRow?: string | number
   confirmedItem?: string
   reviewReason?: string
 }
 export type Coverage = { startDate: string; endDate: string; statementCount: number }
-export type StatementImport = { id: string; fileFingerprint: string; supportedLayoutId: string; coverageStart: string; coverageEnd: string; transactionIds: string[]; unresolvedCount: number }
+export type StatementImport = ImportRecord
 export type DashboardPeriod = 'week' | 'month' | 'year'
 export type AppRoute = 'dashboard' | 'import' | 'opportunities' | 'planning'
 export type ProtectionRule = { id: string; scope: 'transaction' | 'confirmedItem' | 'merchant'; matchingKey: string; label: string }
@@ -27,6 +29,7 @@ export type GoalSnapshot = { id: string; name: string; targetPence: number; save
 export type SharedState = {
   route: AppRoute
   transactions: Transaction[]
+  imports: StatementImport[]
   coverage: Coverage | null
   isDemoData: boolean
   period: DashboardPeriod
@@ -40,7 +43,7 @@ export type SharedState = {
 }
 export type SharedAction =
   | { type: 'navigation/go'; route: AppRoute }
-  | { type: 'ledger/replace'; transactions: Transaction[]; coverage: Coverage | null }
+  | { type: 'ledger/replace'; transactions: Transaction[]; coverage: Coverage | null; imports?: StatementImport[] }
   | { type: 'dashboard/period'; period: DashboardPeriod }
   | { type: 'dashboard/offset'; offset: number }
   | { type: 'dashboard/select-date'; date: string | null }

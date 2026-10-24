@@ -4,13 +4,13 @@ import { StateContext } from './stateContext'
 import { demoCoverage, demoTransactions } from './src/assets/demoData'
 
 const initialState: SharedState = {
-  route: 'dashboard', transactions: demoTransactions, coverage: demoCoverage, isDemoData: true,
+  route: 'dashboard', transactions: demoTransactions, imports: [], coverage: demoCoverage, isDemoData: true,
   period: 'week', periodOffset: 0, selectedDate: null, budget: null, goal: null, opportunities: [], protections: [], selectedActions: [],
 }
 function reducer(state: SharedState, action: SharedAction): SharedState {
   switch (action.type) {
     case 'navigation/go': return { ...state, route: action.route }
-    case 'ledger/replace': return { ...state, transactions: action.transactions, coverage: action.coverage, isDemoData: false, selectedDate: null, periodOffset: 0 }
+    case 'ledger/replace': return { ...state, transactions: action.transactions, imports: action.imports ?? state.imports, coverage: action.coverage, isDemoData: false, selectedDate: null, periodOffset: 0 }
     case 'dashboard/period': return { ...state, period: action.period, periodOffset: 0, selectedDate: null }
     case 'dashboard/offset': return { ...state, periodOffset: action.offset, selectedDate: null }
     case 'dashboard/select-date': return { ...state, selectedDate: action.date }

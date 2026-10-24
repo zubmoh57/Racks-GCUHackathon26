@@ -5,6 +5,7 @@ import { parseStatementLines } from '../src/features/import/statement';
 import { createTextPdf, SAMPLE_STATEMENT_LINES } from '../src/features/import/sample';
 import { textItemsToLines } from '../src/features/import/pdf';
 import type { LedgerState, Transaction } from '../src/features/import/types';
+import { getImportLedger, ledgerReplacement } from '../src/features/import/frontendAdapter';
 
 const empty = (): LedgerState => ({ transactions: [], imports: [] });
 const parse = (text: readonly string[] = SAMPLE_STATEMENT_LINES, fingerprint = 'fixture-a') => parseStatementLines(text.map((line, index) => ({ text: line, page: 1, line: index + 1 })), fingerprint, 'fixture.pdf');
@@ -124,5 +125,28 @@ describe('manual expenses', () => {
     const ledger = { transactions: [{ ...cash(), source: 'statement' as const }], imports: [] };
     expect(() => upsertManualExpense(ledger, cash())).toThrow(/replace/);
     expect(() => upsertManualExpense(empty(), { ...cash(), kind: 'transfer' })).toThrow(/cash purchases/);
+  });
+});
+
+describe('Morrow frontend integration', () => {
+  it('replaces fictional preview data rather than importing it as personal spending', () => {
+    expect(getImportLedger({ transactions: [cash()], imports: [], isDemoData: true })).toEqual(empty());
+  });
+  it('round-trips signed pence, readable categories, provenance and duplicate fingerprints', () => {
+    const preview = parse();
+    const ledger = confirmImport(empty(), preview, { transactions: preview.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] });
+    const action = ledgerReplacement(ledger);
+    expect(action.coverage).toEqual({ startDate: '2026-10-01', endDate: '2026-10-23', statementCount: 1 });
+    expect(action.transactions[1]).toMatchObject({ category: 'Rent & housing', amountPence: -65000, sourceRow: ledger.transactions[1].sourceRow });
+    const restored = getImportLedger({ transactions: action.transactions, imports: action.imports!, isDemoData: false });
+    expect(restored).toEqual(ledger);
+    expect(() => confirmImport(restored, preview, { transactions: preview.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] })).toThrow(/already/);
+  });
+  it('covers all imported periods and manual dates while counting only statements', () => {
+    const preview = parse();
+    const ledger = confirmImport(empty(), preview, { transactions: preview.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] });
+    const withCash = upsertManualExpense(ledger, { ...cash(), date: '2026-10-24' });
+    expect(ledgerReplacement(withCash).coverage).toEqual({ startDate: '2026-10-01', endDate: '2026-10-24', statementCount: 1 });
+    expect(ledgerReplacement(empty()).coverage).toBeNull();
   });
 });
