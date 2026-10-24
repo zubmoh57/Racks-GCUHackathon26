@@ -4,7 +4,8 @@ import { getImportLedger, ledgerReplacement } from './src/features/import/fronte
 import { ReviewTransactionForm } from './src/features/import/ReviewTransactionForm'
 import { removeTransaction, upsertManualExpense } from './src/features/import/ledger'
 import type { Transaction } from './src/features/import/types'
-import { dateLabel, money, spendingRatio, totals, transactionTone } from './src/features/journey/finance'
+import { dateLabel, money, monthBalances, spendingRatio, totals, transactionTone } from './src/features/journey/finance'
+import { monthLabel } from './src/features/import/statementMonths'
 
 const labels = { essential: 'Essential', flexible: 'Flexible', risk: 'Check this · gambling', incoming: 'Money in', neutral: 'Transfer / cash' }
 
@@ -12,15 +13,17 @@ export default function Dashboard() {
   const { state, dispatch } = useAppState()
   const [period, setPeriod] = useState('all')
   const [anchor, setAnchor] = useState(state.coverage?.endDate ?? new Date().toISOString().slice(0, 10))
-  const [includeFunding, setIncludeFunding] = useState(false)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Transaction | null>(null)
   const ledger = getImportLedger(state)
   const rows = state.transactions.filter(row => period === 'all' || row.date.slice(0, period === 'day' ? 10 : period === 'month' ? 7 : 4) === anchor.slice(0, period === 'day' ? 10 : period === 'month' ? 7 : 4))
   const summary = totals(rows)
-  const income = summary.income + (includeFunding ? summary.funding : 0)
+  const income = summary.income
   const ratio = spendingRatio(summary.spending, income)
+  const covered = [...new Set(state.transactions.map(row => row.date.slice(0, 7)))].sort()
+  const balanceMonth = period === 'day' || period === 'month' ? anchor.slice(0, 7) : covered[covered.length - 1] ?? anchor.slice(0, 7)
+  const balances = monthBalances(state.transactions, balanceMonth)
   const displayed = rows.filter(row => (filter === 'all' || transactionTone(row) === filter) && `${row.description} ${row.confirmedItem ?? ''} ${row.category}`.toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.date.localeCompare(a.date))
   const coverageLabel = state.coverage ? `${dateLabel(state.coverage.startDate)} – ${dateLabel(state.coverage.endDate)} ${state.coverage.endDate.slice(0, 4)}` : 'Your statements'
 
@@ -41,11 +44,21 @@ export default function Dashboard() {
     <section className="surface balance-panel" aria-label="Income and spending summary">
       <div className="panel-toolbar"><h2>Your money at a glance</h2><div className="date-controls"><div className="segmented" aria-label="Reporting period">{[['all', 'All dates'], ['day', 'Day'], ['month', 'Month'], ['year', 'Year']].map(([value, label]) => <button key={value} aria-pressed={period === value} onClick={() => setPeriod(value)}>{label}</button>)}</div>{period !== 'all' && <input type="date" aria-label="Date within reporting period" value={anchor} onChange={event => { if (event.target.value) setAnchor(event.target.value) }} />}</div></div>
       <div className="balance-grid">
-        <div className="balance-amount income-amount"><span className="metric-label">{includeFunding ? 'INCOME + STUDENT FUNDING' : 'INCOME'}</span><strong>{money(income)}</strong><span className="metric-detail">{includeFunding ? 'Funding is shown separately below' : 'Wages and other income'}</span></div>
-        <div className={'ratio-summary ' + ratio.tone}><span className="metric-label">SPENDING / {includeFunding ? 'MONEY IN' : 'INCOME'}</span><strong>{ratio.percent === null ? '—' : `${ratio.percent.toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`}</strong><span className="status-label">{ratio.label}</span></div>
+        <div className="balance-amount income-amount"><span className="metric-label">INCOME</span><strong>{money(income)}</strong><span className="metric-detail">Wages and other income</span></div>
+        <div className={'ratio-summary ' + ratio.tone}><span className="metric-label">SPENDING / INCOME</span><strong>{ratio.percent === null ? '—' : `${ratio.percent.toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`}</strong><span className="status-label">{ratio.label}</span></div>
         <div className="balance-amount spending-amount"><span className="metric-label">SPENDING</span><strong>{money(summary.spending)}</strong><span className="metric-detail">Purchases less {money(summary.refunds)} in refunds</span></div>
       </div>
-      <div className="balance-foot"><label className="check-label"><input type="checkbox" checked={includeFunding} onChange={event => setIncludeFunding(event.target.checked)} />Include student funding ({money(summary.funding)}) in the ratio</label><details><summary>How is this rated?</summary><p>Our budget guide: up to 70% great; above 70% to 90% good; above 90% to 100% needs improvement; above 100% over budget. These describe spending for the selected dates, not your overall financial health. Student funding can be a loan or a termly payment. Transfers and cash withdrawals are excluded.</p></details></div>
+      <div className="balance-strip" aria-label={`Balance across ${monthLabel(balanceMonth)}`}>
+        <span className="balance-strip-label">BALANCE · {monthLabel(balanceMonth).toUpperCase()}</span>
+        <div className="balance-tiles">
+          <div className="balance-tile"><span>START OF MONTH</span><strong>{money(balances.opening)}</strong></div>
+          <span className="balance-arrow" aria-hidden="true">⟶</span>
+          <div className="balance-tile"><span>END OF MONTH</span><strong>{money(balances.closing)}</strong></div>
+          <div className={'balance-tile balance-change ' + (balances.change < 0 ? 'down' : 'up')}><span>CHANGE</span><strong>{balances.change < 0 ? '−' : '+'}{money(Math.abs(balances.change))}</strong></div>
+        </div>
+        <small>{balances.covered ? 'Counted from £0 at the start of your first statement, including transfers and cash withdrawals. Your bank’s own opening balance is not in the PDF.' : `No transactions in ${monthLabel(balanceMonth)}.`}</small>
+      </div>
+      <div className="balance-foot"><details><summary>How is this rated?</summary><p>Our budget guide: up to 70% great; above 70% to 90% good; above 90% to 100% needs improvement; above 100% over budget. These describe spending for the selected dates, not your overall financial health. Student funding can be a loan or a termly payment. Transfers and cash withdrawals are excluded.</p></details></div>
     </section>
     <section className="surface purchases-panel" aria-labelledby="purchases-title">
       <div className="panel-toolbar"><div><h2 id="purchases-title">Your transactions <span className="count-badge">{displayed.length}</span></h2><p className="subtle">Categories are suggestions. Edit anything that doesn’t look right.</p></div><button className="secondary-button" onClick={addCash}>+ Add other expenses</button></div>

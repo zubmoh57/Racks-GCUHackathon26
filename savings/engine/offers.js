@@ -117,19 +117,6 @@ export const OFFERS = [
     verify: false,
   },
   {
-    id: 'olio-foodshare',
-    title: 'Olio and campus food shares',
-    provider: 'Olio / students union',
-    url: 'https://olioapp.com/en/',
-    blurb: 'Free surplus food shared by neighbours and shops, plus most unions run a food pantry.',
-    appliesTo: {
-      categories: ['groceries'],
-      keywords: ['tesco', 'sainsbury', 'asda', 'morrisons', 'co-op', 'waitrose', 'lidl', 'aldi'],
-    },
-    savingModel: { type: 'fixed', value: 15 },
-    verify: true,
-  },
-  {
     id: 'supermarket-own-brand',
     title: 'Own-brand and student discount days',
     provider: 'Major UK supermarkets',

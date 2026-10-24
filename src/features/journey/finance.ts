@@ -1,4 +1,4 @@
-import type { Coverage, MoneyPlan, Transaction } from '../../assets/contracts'
+import type { Coverage, Priorities, Transaction } from '../../assets/contracts'
 
 export const money = (pence: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(pence / 100)
 export const dateLabel = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
@@ -24,63 +24,42 @@ export function spendingRatio(spending: number, income: number) {
 }
 
 export function monthlyBaseline(rows: readonly Transaction[], coverage: Coverage | null) {
-  if (!coverage) return { income: 0, essentials: 0 }
+  if (!coverage) return { income: 0, funding: 0, essentials: 0 }
   const monthNumber = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7))
   const months = Math.max(1, monthNumber(coverage.endDate) - monthNumber(coverage.startDate) + 1)
   const essentialCategories = new Set(rows.filter(row => transactionTone(row) === 'essential').map(row => row.category))
   const essentials = rows.filter(row => transactionTone(row) === 'essential' || row.kind === 'refund' && essentialCategories.has(row.category)).reduce((sum, row) => sum - row.amountPence, 0)
-  return { income: Math.round(totals(rows).income / months), essentials: Math.max(0, Math.round(essentials / months)) }
+  const summary = totals(rows)
+  return { income: Math.round(summary.income / months), funding: Math.round(summary.funding / months), essentials: Math.max(0, Math.round(essentials / months)) }
 }
 
-/** Essentials never reserve the last slice, so everyday spending, cash savings and investing always stay adjustable. */
+/** A running balance from zero at the first statement: a bank's own opening balance is not in the PDF. */
+export function monthBalances(rows: readonly Transaction[], month: string) {
+  const before = rows.filter(row => row.date.slice(0, 7) < month)
+  const during = rows.filter(row => row.date.slice(0, 7) === month)
+  const add = (sum: number, row: Transaction) => sum + row.amountPence
+  const opening = before.reduce(add, 0), change = during.reduce(add, 0)
+  return { opening, closing: opening + change, change, covered: during.length > 0 }
+}
+
+/** Essentials never reserve the last slice, so a plan always has something left to allocate. */
 export const MINIMUM_ALLOCATABLE_SHARE = 0.01
+export const PRIORITY_MAX = 10
 
-/** Bills first; integer rounding always reconciles exactly to the available income. */
-export function allocateMoney(income: number, essentials: number, preferences: Pick<MoneyPlan, 'freedom' | 'cushion' | 'future' | 'investmentReady'>) {
-  if (![income, essentials].every(value => Number.isSafeInteger(value) && value >= 0)) throw new Error('Use non-negative amounts in pence.')
-  const weights = [preferences.freedom, preferences.cushion, preferences.future]
-  if (!weights.every(value => Number.isFinite(value) && value >= 0 && value <= 100)) throw new Error('Choose priorities from 0 to 100.')
-  const reserved = Math.min(income, essentials, Math.floor(income * (1 - MINIMUM_ALLOCATABLE_SHARE))), available = income - reserved
-  const weightTotal = weights.reduce((a, b) => a + b, 0)
-  const freedom = weightTotal ? Math.floor(available * weights[0] / weightTotal) : 0
-  const future = weightTotal ? Math.floor(available * weights[2] / weightTotal) : 0
-  const cushion = available - freedom - future
-  return { essentials: reserved, freedom, cushion: cushion + (preferences.investmentReady ? 0 : future), invest: preferences.investmentReady ? future : 0, shortfall: Math.max(0, essentials - income) }
-}
-
-export type ShareKey = 'freedom' | 'cushion' | 'future'
-export type Shares = Pick<MoneyPlan, ShareKey>
-
-/** A pie divider moves money between its neighbours while preserving the third share. */
-export function moveDivider(current: Shares, first: ShareKey, second: ShareKey, value: number): Shares {
-  const pairTotal = current[first] + current[second]
-  const next = Math.max(0, Math.min(pairTotal, Number.isFinite(value) ? value : current[first]))
-  return { freedom: current.freedom, cushion: current.cushion, future: current.future, [first]: next, [second]: pairTotal - next }
-}
-
-/** Hold the edited share; redistribute the remaining percentage between the other shares. */
-export function rebalanceShares(current: Shares, key: ShareKey, value: number): Shares {
-  const next = Math.max(0, Math.min(100, Number.isFinite(value) ? value : current[key]))
-  const others = (['freedom', 'cushion', 'future'] as const).filter(item => item !== key)
-  const remaining = 100 - next
-  const otherTotal = current[others[0]] + current[others[1]]
-  const first = Math.max(0, Math.min(remaining, otherTotal ? remaining * current[others[0]] / otherTotal : remaining))
-  return { ...current, [key]: next, [others[0]]: first, [others[1]]: remaining - first }
-}
-
-/** Largest-remainder rounding: all displayed pie percentages sum to exactly 100.0%. */
-export function piePercentages(amounts: readonly number[], fixEssentials = false): number[] {
-  const total = amounts.reduce((sum, amount) => sum + amount, 0)
-  if (total <= 0) return amounts.map(() => 0)
-  const scaled = amounts.map(amount => amount / total * 1000)
-  if (fixEssentials) {
-    scaled[0] = Math.round(scaled[0])
-    const flexible = total - amounts[0]
-    for (let i = 1; i < scaled.length; i++) scaled[i] = flexible ? amounts[i] / flexible * (1000 - scaled[0]) : 0
+/** Bills first, then the remainder in proportion to the ratings. Integer pence always reconcile to money in. */
+export function recommendAllocation(moneyIn: number, essentials: number, priorities: Priorities) {
+  if (![moneyIn, essentials].every(value => Number.isSafeInteger(value) && value >= 0)) throw new Error('Use non-negative amounts in pence.')
+  const ratings = [priorities.everyday, priorities.savings, priorities.investing]
+  if (!ratings.every(value => Number.isInteger(value) && value >= 0 && value <= PRIORITY_MAX)) throw new Error(`Rate each priority from 0 to ${PRIORITY_MAX}.`)
+  const reserved = Math.min(moneyIn, essentials, Math.floor(moneyIn * (1 - MINIMUM_ALLOCATABLE_SHARE)))
+  const available = moneyIn - reserved
+  const ratingTotal = ratings.reduce((sum, rating) => sum + rating, 0)
+  const everyday = ratingTotal ? Math.floor(available * ratings[0] / ratingTotal) : 0
+  const investing = ratingTotal ? Math.floor(available * ratings[2] / ratingTotal) : 0
+  return {
+    moneyIn, available, essentials: reserved, everyday, investing,
+    /** Nothing rated, and every rounding penny, waits in cash savings. */
+    savings: available - everyday - investing,
+    shortfall: Math.max(0, essentials - moneyIn),
   }
-  const units = scaled.map(Math.floor)
-  const order = scaled.map((value, index) => ({ index, remainder: value - units[index] })).filter(item => !fixEssentials || item.index !== 0).sort((a, b) => b.remainder - a.remainder)
-  const remaining = 1000 - units.reduce((sum, value) => sum + value, 0)
-  for (let i = 0; i < remaining; i++) units[order[i].index]++
-  return units.map(value => value / 10)
 }
