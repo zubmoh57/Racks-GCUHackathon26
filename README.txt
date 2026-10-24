@@ -1,5 +1,1 @@
-Typography update
-
-This replaces App.css with a small readability increase across headings, labels, transaction rows, and buttons. It preserves the current layout, dark mode, and tab transitions.
-
-Extract this ZIP into C:\blackrock_hackathon\CaledoniaHackathon26 and choose Replace the files. Then refresh the app in your browser.
+Extract this ZIP into the project root and choose Replace for App.css. It moves the date and “Recorded spending” labels up a little more while keeping the graph in place and preserving space between the labels and the graph.
