@@ -29,7 +29,7 @@ function AppShell() {
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="app-header">
       <div className="header-inner">
-        <button className="brand" onClick={() => dispatch({ type: 'navigation/go', route: 'import' })} aria-label="Morrow home">morrow<span className="brand-dot">.</span></button>
+        <button className="brand" onClick={() => dispatch({ type: 'navigation/go', route: 'import' })} aria-label="Racks home">racks<span className="brand-dot">.</span></button>
         <span className="header-purpose">Your student money</span>
         <span className="header-private"><span aria-hidden="true">◈</span> Your data stays on this device</span>
       </div>
@@ -42,7 +42,7 @@ function AppShell() {
         {state.route === 'import' ? <PdfUploadPage /> : state.route === 'dashboard' ? <Dashboard /> : state.route === 'opportunities' ? <SavingsPage /> : <MoneyPlanPage />}
       </div></div>
     </main>
-    <footer className="app-footer"><span>morrow<span className="brand-dot">.</span></span><small>Session only · Refreshing clears your statements</small></footer>
+    <footer className="app-footer"><span>racks<span className="brand-dot">.</span></span><small>Session only · Refreshing clears your statements</small></footer>
   </div>
 }
 

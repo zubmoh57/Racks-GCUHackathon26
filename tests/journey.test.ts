@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../src/assets/contracts'
-import { allocateMoney, monthlyBaseline, piePercentages, rebalanceShares, spendingRatio, totals, transactionTone } from '../src/features/journey/finance'
+import { allocateMoney, monthlyBaseline, moveDivider, piePercentages, rebalanceShares, spendingRatio, totals, transactionTone } from '../src/features/journey/finance'
 import { isProtected, savingsInput } from '../src/features/journey/savingsAdapter'
 import { monthLabel, statementMonths } from '../src/features/import/statementMonths'
 import type { StatementImport } from '../src/features/import/types'
@@ -52,6 +52,19 @@ describe('monthly allocation', () => {
 })
 
 describe('percentage controls', () => {
+  it('moves a divider between spending and cash without changing investing', () => expect(moveDivider(preferences, 'freedom', 'cushion', 60)).toEqual({ freedom: 60, cushion: 25, future: 15 }))
+  it('moves a cash/investing divider without changing spending', () => expect(moveDivider(preferences, 'cushion', 'future', 20)).toEqual({ freedom: 50, cushion: 20, future: 30 }))
+  it('clamps divider movement to its two slices without creating negative amounts', () => {
+    expect(moveDivider(preferences, 'freedom', 'cushion', 100)).toEqual({ freedom: 85, cushion: 0, future: 15 })
+    expect(moveDivider(preferences, 'cushion', 'future', -1)).toEqual({ freedom: 50, cushion: 0, future: 50 })
+  })
+  it('keeps the essentials percentage fixed while rounding the other slices to a complete 100%', () => {
+    for (let spending = 0; spending <= 1000; spending++) {
+      const percentages = piePercentages([20000, spending, 100000 - spending, 0], true)
+      expect(percentages[0]).toBe(16.7)
+      expect(percentages.reduce((sum, value) => sum + Math.round(value * 10), 0)).toBe(1000)
+    }
+  })
   it('preserves the chosen percentage and rebalances the other two', () => {
     expect(rebalanceShares({ freedom: 50, cushion: 35, future: 15 }, 'freedom', 70)).toEqual({ freedom: 70, cushion: 21, future: 9 })
   })

@@ -1,4 +1,4 @@
-# Morrow — student financial wellbeing
+# Racks — student financial wellbeing
 
 A website for students aged 18+ in Glasgow and the UK.
 
@@ -38,4 +38,4 @@ The ten-year illustration reuses the planning module's calculator with negative,
 - [Original planning module](features/planning/index.ts), [integration contract](INTEGRATION.md) and [standalone preview](preview/index.html)
 - [Team context](TEAM_CONTEXT.md)
 
-`npm test` runs 55 PDF/ledger/journey checks, 23 savings-engine checks and 13 original planning checks. `npm run build` type-checks the app and planning sources and builds the main app. The original independent previews remain available at `/preview/index.html` and `/savings/demo/index.html` under `npm run dev`; they use their own fictional data. Protection functionality remains in the independent engine, but is not exposed or applied by the main app.
+`npm test` runs 59 PDF/ledger/journey checks, 23 savings-engine checks and 13 original planning checks. `npm run build` type-checks the app and planning sources and builds the main app. The original independent previews remain available at `/preview/index.html` and `/savings/demo/index.html` under `npm run dev`; they use their own fictional data. Protection functionality remains in the independent engine, but is not exposed or applied by the main app.

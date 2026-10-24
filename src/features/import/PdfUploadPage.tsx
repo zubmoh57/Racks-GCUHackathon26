@@ -17,7 +17,7 @@ const dateLabel = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateSt
 function downloadSample() {
   const url = URL.createObjectURL(createSampleStatement());
   const link = document.createElement('a');
-  link.href = url; link.download = 'morrow-sample-statement.pdf'; link.click();
+  link.href = url; link.download = 'racks-sample-statement.pdf'; link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 

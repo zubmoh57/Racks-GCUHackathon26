@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useAppState } from '../../../useAppState'
 import { parsePounds } from '../import/money'
-import { allocateMoney, money, monthlyBaseline, piePercentages, rebalanceShares } from './finance'
+import { allocateMoney, money, monthlyBaseline, moveDivider, piePercentages, rebalanceShares } from './finance'
 import type { ShareKey } from './finance'
 import { AllocationPie } from './AllocationPie'
+import { PercentageInput } from './PercentageInput'
 import { projectContributions } from '../../../features/planning/calculators'
 
 function AmountField({ label, value, onChange, onValidityChange, onDraftChange }: { label: string; value: number; onChange: (value: number) => void; onValidityChange: (valid: boolean) => void; onDraftChange: () => void }) {
@@ -28,6 +29,7 @@ function AmountField({ label, value, onChange, onValidityChange, onDraftChange }
 export function MoneyPlanPage() {
   const { state, dispatch } = useAppState()
   const [invalidFields, setInvalidFields] = useState<string[]>([])
+  const [allocationMessage, setAllocationMessage] = useState('Choose a category. Racks balances the other percentages for you.')
   const preferences = state.moneyPlan
   const baseline = monthlyBaseline(state.transactions, state.coverage)
   const income = preferences.incomePence ?? baseline.income
@@ -41,15 +43,25 @@ export function MoneyPlanPage() {
     { label: 'Cash savings', amount: plan.cushion, color: '#16866b', description: 'Your cushion and savings goal', key: 'cushion' as const },
     { label: 'Investing illustration', amount: plan.invest, color: '#3979af', description: 'A hypothetical long-term contribution', key: 'future' as const },
   ]
-  const percentages = piePercentages(portions.map(portion => portion.amount))
-  const remaining = Math.max(0, 100 - percentages[0])
+  const percentages = piePercentages(portions.map(portion => portion.amount), true)
+  const remaining = Math.max(0, Math.round((100 - percentages[0]) * 10) / 10)
   function changePercentage(key: ShareKey, percentage: number) {
     if (!totalIncome || remaining <= 0 || key === 'future' && !preferences.investmentReady) return
     const next = Math.max(0, Math.min(remaining, percentage)) / remaining * 100
     update(rebalanceShares(preferences, key, next))
+    const label = { freedom: 'Everyday spending', cushion: 'Cash savings', future: 'Investing' }[key]
+    setAllocationMessage(percentage > remaining ? `Essentials are reserved. Racks set ${label.toLowerCase()} to ${remaining}% and balanced the rest.` : `${label} updated. Racks automatically balanced the other categories.`)
+  }
+  function changeDivider(first: ShareKey, second: ShareKey, percentage: number) {
+    if (!totalIncome || !remaining) return
+    update(moveDivider(preferences, first, second, percentage / remaining * 100))
+    setAllocationMessage('Racks moved money between the neighbouring slices. Your total is still 100%.')
+  }
+  function setFieldValidity(label: string, valid: boolean) {
+    setInvalidFields(current => valid ? current.filter(item => item !== label) : current.includes(label) ? current : [...current, label])
   }
   function field(label: string, value: number, onChange: (value: number) => void) {
-    return <AmountField label={label} value={value} onChange={onChange} onDraftChange={() => update({ confirmed: false })} onValidityChange={valid => setInvalidFields(current => valid ? current.filter(item => item !== label) : current.includes(label) ? current : [...current, label])} />
+    return <AmountField label={label} value={value} onChange={onChange} onDraftChange={() => update({ confirmed: false })} onValidityChange={valid => setFieldValidity(label, valid)} />
   }
   const scenarios = projectContributions(plan.invest, 10)
   const canConfirm = totalIncome > 0 && !plan.shortfall && invalidFields.length === 0 && preferences.goalName.trim().length > 0 && preferences.goalTargetPence > 0
@@ -64,10 +76,11 @@ export function MoneyPlanPage() {
         <label className="check-label investment-check"><input type="checkbox" checked={preferences.investmentReady} onChange={event => update({ investmentReady: event.target.checked, ...(!event.target.checked ? { cushion: preferences.cushion + preferences.future, future: 0 } : {}) })} /><span>I have an emergency cash fund, my short-term debt is covered, and I want to explore investing.</span></label>
         <p className="subtle">Essentials are reserved first. Investing stays at 0% until you choose to explore it.</p>
       </section>
-      <section className="surface plan-result" aria-labelledby="plan-result-title"><div className="panel-toolbar"><h2 id="plan-result-title">Set your percentages</h2><span className="allocation-total">{totalIncome ? 'Total 100%' : 'Add income to allocate'}</span></div>
-        <AllocationPie percentages={percentages} colors={portions.map(portion => portion.color)} totalLabel={money(totalIncome)} canInvest={preferences.investmentReady} onChange={changePercentage} />
-        <p className="pie-instructions">Drag the white points or edit the percentages below. Other slices adjust automatically so the total stays at 100%. Essentials stay tied to your bills above.</p>
-        <div className="percentage-legend">{portions.map((portion, index) => <div className="percentage-row" key={portion.label}><span className="legend-square" style={{ background: portion.color }}/><span className="percentage-description"><b>{portion.label}</b><small>{portion.description}</small></span><strong>{money(portion.amount)}</strong>{portion.key === null ? <span className="fixed-percentage" aria-label={`Essentials ${percentages[index]} percent, fixed`}>{percentages[index]}%<small>Fixed</small></span> : <label className="percentage-input"><span className="sr-only">{portion.label} percentage</span><input type="number" min="0" max={remaining} step="0.1" value={percentages[index]} disabled={!totalIncome || !remaining || portion.key === 'future' && !preferences.investmentReady} onChange={event => { if (event.target.value !== '' && Number.isFinite(event.target.valueAsNumber)) changePercentage(portion.key!, event.target.valueAsNumber) }} /><span aria-hidden="true">%</span></label>}</div>)}</div>
+      <section className="surface plan-result" aria-labelledby="plan-result-title"><div className="panel-toolbar"><h2 id="plan-result-title">Adjust your money split</h2><span className="allocation-total">{totalIncome ? 'Auto-balanced · 100%' : 'Add income to allocate'}</span></div>
+        <AllocationPie percentages={percentages} colors={portions.map(portion => portion.color)} totalLabel={money(totalIncome)} canInvest={preferences.investmentReady} onDividerChange={changeDivider} />
+        <p className="pie-instructions">Drag a white divider to move money between slices, or type a percentage below. Racks reserves essentials first and automatically makes the total 100%.</p>
+        <p className="allocation-feedback" role="status">{allocationMessage}</p>
+        <div className="percentage-legend">{portions.map((portion, index) => <div className="percentage-row" key={portion.label}><span className="legend-square" style={{ background: portion.color }}/><span className="percentage-description"><b>{portion.label}</b><small>{portion.description}</small></span><strong>{money(portion.amount)}</strong>{portion.key === null ? <span className="fixed-percentage" aria-label={`Essentials ${percentages[index]} percent, fixed`}>{percentages[index]}%<small>Fixed</small></span> : <PercentageInput label={portion.label} value={percentages[index]} maximum={remaining} disabled={!totalIncome || !remaining || portion.key === 'future' && !preferences.investmentReady} onChange={value => changePercentage(portion.key!, value)} onDraftChange={() => update({ confirmed: false })} onValidityChange={valid => setFieldValidity(portion.label, valid)} />}</div>)}</div>
         {preferences.confirmed && <div className="plan-confirmed" role="status"><b>✓ Plan confirmed</b><span>{preferences.goalName} · Target {money(preferences.goalTargetPence)}</span><small>Saved for this session. Changing your plan or statements will require confirmation again.</small></div>}
         {plan.shortfall > 0 && <p className="plan-warning" role="status">Essentials exceed monthly money in by <b>{money(plan.shortfall)}</b>. Check your funding, bills and income before confirming.</p>}
         <details className="projection-details"><summary>Explore a 10-year investing illustration <span>+</span></summary><p>If you chose to contribute {money(plan.invest)} each month:</p><table><caption>Hypothetical returns, not forecasts</caption><thead><tr><th>Annual return</th><th>After 10 years</th></tr></thead><tbody>{scenarios.map(scenario => <tr key={scenario.annualReturn}><td>{scenario.annualReturn * 100}%</td><td>{money(scenario.valuePence)}</td></tr>)}</tbody></table><p>You contribute {money(scenarios[0].contributedPence)}. Zero opening balance; fees, tax and inflation excluded. Investments can lose some or all of their value.</p></details>

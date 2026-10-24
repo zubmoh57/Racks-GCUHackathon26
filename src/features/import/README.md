@@ -11,7 +11,7 @@ This module supplies the PDF upload/review page and its parsing/ledger functions
 - Manual cash expense validation, add/edit/delete and spending totals.
 - Five synthetic PDF fixtures, expected totals and 23 unit/integration tests.
 
-## Morrow app integration
+## Racks app integration
 
 Blazej's frontend was the original base. After all branches were merged into `main`, the user requested the upload-first redesign. `App.tsx` connects the first journey step to `PdfUploadPage.tsx`. `pdf-upload.css` matches the shared navy/white/orange shell; the app respects reduced-motion preferences throughout.
 

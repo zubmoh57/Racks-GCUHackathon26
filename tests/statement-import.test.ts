@@ -128,7 +128,7 @@ describe('manual expenses', () => {
   });
 });
 
-describe('Morrow frontend integration', () => {
+describe('Racks frontend integration', () => {
   it('replaces fictional preview data rather than importing it as personal spending', () => {
     expect(getImportLedger({ transactions: [cash()], imports: [], isDemoData: true })).toEqual(empty());
   });

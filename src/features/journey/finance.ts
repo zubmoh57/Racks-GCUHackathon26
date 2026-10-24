@@ -48,6 +48,13 @@ export function allocateMoney(income: number, essentials: number, preferences: P
 export type ShareKey = 'freedom' | 'cushion' | 'future'
 export type Shares = Pick<MoneyPlan, ShareKey>
 
+/** A pie divider moves money between its neighbours while preserving the third share. */
+export function moveDivider(current: Shares, first: ShareKey, second: ShareKey, value: number): Shares {
+  const pairTotal = current[first] + current[second]
+  const next = Math.max(0, Math.min(pairTotal, Number.isFinite(value) ? value : current[first]))
+  return { freedom: current.freedom, cushion: current.cushion, future: current.future, [first]: next, [second]: pairTotal - next }
+}
+
 /** Hold the edited share; redistribute the remaining percentage between the other shares. */
 export function rebalanceShares(current: Shares, key: ShareKey, value: number): Shares {
   const next = Math.max(0, Math.min(100, Number.isFinite(value) ? value : current[key]))
@@ -59,12 +66,17 @@ export function rebalanceShares(current: Shares, key: ShareKey, value: number): 
 }
 
 /** Largest-remainder rounding: all displayed pie percentages sum to exactly 100.0%. */
-export function piePercentages(amounts: readonly number[]): number[] {
+export function piePercentages(amounts: readonly number[], fixEssentials = false): number[] {
   const total = amounts.reduce((sum, amount) => sum + amount, 0)
   if (total <= 0) return amounts.map(() => 0)
   const scaled = amounts.map(amount => amount / total * 1000)
+  if (fixEssentials) {
+    scaled[0] = Math.round(scaled[0])
+    const flexible = total - amounts[0]
+    for (let i = 1; i < scaled.length; i++) scaled[i] = flexible ? amounts[i] / flexible * (1000 - scaled[0]) : 0
+  }
   const units = scaled.map(Math.floor)
-  const order = scaled.map((value, index) => ({ index, remainder: value - units[index] })).sort((a, b) => b.remainder - a.remainder)
+  const order = scaled.map((value, index) => ({ index, remainder: value - units[index] })).filter(item => !fixEssentials || item.index !== 0).sort((a, b) => b.remainder - a.remainder)
   const remaining = 1000 - units.reduce((sum, value) => sum + value, 0)
   for (let i = 0; i < remaining; i++) units[order[i].index]++
   return units.map(value => value / 10)
