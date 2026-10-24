@@ -31,7 +31,6 @@ function AppShell() {
       <div className="header-inner">
         <button className="brand" onClick={() => dispatch({ type: 'navigation/go', route: 'import' })} aria-label="Morrow home">morrow<span className="brand-dot">.</span></button>
         <span className="header-purpose">Your student money</span>
-        <span className="header-location"><svg width="16" height="20" viewBox="0 0 20 24" fill="none" aria-hidden="true"><path d="M18 9c0 6-8 13-8 13S2 15 2 9a8 8 0 1 1 16 0Z" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5"/></svg><span>Made for students<b>Glasgow, UK</b></span></span>
         <span className="header-private"><span aria-hidden="true">◈</span> Your data stays on this device</span>
       </div>
       <nav className="journey-nav" aria-label="Your money journey"><ol>
@@ -43,7 +42,7 @@ function AppShell() {
         {state.route === 'import' ? <PdfUploadPage /> : state.route === 'dashboard' ? <Dashboard /> : state.route === 'opportunities' ? <SavingsPage /> : <MoneyPlanPage />}
       </div></div>
     </main>
-    <footer className="app-footer"><span>morrow<span className="brand-dot">.</span></span><span>Glasgow, UK</span><small>Session only · Refreshing clears your statements</small></footer>
+    <footer className="app-footer"><span>morrow<span className="brand-dot">.</span></span><small>Session only · Refreshing clears your statements</small></footer>
   </div>
 }
 
