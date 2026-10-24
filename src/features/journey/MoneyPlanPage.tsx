@@ -1,6 +1,7 @@
 import { useAppState } from '../../../useAppState'
 import type { Priorities } from '../../assets/contracts'
-import { money, monthlyBaseline, PRIORITY_MAX, recommendAllocation } from './finance'
+import { coveredMonths, money, monthlyBaseline, PRIORITY_MAX, recommendAllocation } from './finance'
+import { BalanceStrip } from './BalanceStrip'
 
 const ratings: { key: keyof Priorities; label: string; hint: string }[] = [
   { key: 'everyday', label: 'Everyday spending', hint: 'Food, travel and going out' },
@@ -13,6 +14,8 @@ export function MoneyPlanPage() {
   const plan = state.moneyPlan
   const baseline = monthlyBaseline(state.transactions, state.coverage)
   const moneyIn = baseline.income + baseline.funding
+  const months = coveredMonths(state.transactions)
+  const latestMonth = months[months.length - 1]
   const result = plan.applied && recommendAllocation(moneyIn, baseline.essentials, plan.applied)
   const stale = plan.applied ? ratings.some(rating => plan.applied![rating.key] !== plan[rating.key]) : false
   const slices = result ? [
@@ -39,6 +42,7 @@ export function MoneyPlanPage() {
       </section>
       <section className="surface plan-result" aria-labelledby="plan-result-title">
         <div className="panel-toolbar"><h2 id="plan-result-title">What to put where</h2>{result && <span className="allocation-total">{money(moneyIn)} a month</span>}</div>
+        {latestMonth && <BalanceStrip rows={state.transactions} month={latestMonth} />}
         {result ? <>
           {stale && <p className="allocation-feedback" role="status">Your ratings changed. Calculate again to update these amounts.</p>}
           <div className="allocation-cards">{slices.map(slice => <article className="allocation-card" key={slice.label}>

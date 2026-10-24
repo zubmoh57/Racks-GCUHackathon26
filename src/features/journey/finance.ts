@@ -33,12 +33,13 @@ export function monthlyBaseline(rows: readonly Transaction[], coverage: Coverage
   return { income: Math.round(summary.income / months), funding: Math.round(summary.funding / months), essentials: Math.max(0, Math.round(essentials / months)) }
 }
 
-/** A running balance from zero at the first statement: a bank's own opening balance is not in the PDF. */
+export const coveredMonths = (rows: readonly Transaction[]) => [...new Set(rows.map(row => row.date.slice(0, 7)))].sort()
+
+/** Income less spending, the same two figures the breakdown shows, carried from zero at the first statement. */
 export function monthBalances(rows: readonly Transaction[], month: string) {
-  const before = rows.filter(row => row.date.slice(0, 7) < month)
+  const flow = (subset: readonly Transaction[]) => { const summary = totals(subset); return summary.income - summary.spending }
   const during = rows.filter(row => row.date.slice(0, 7) === month)
-  const add = (sum: number, row: Transaction) => sum + row.amountPence
-  const opening = before.reduce(add, 0), change = during.reduce(add, 0)
+  const opening = flow(rows.filter(row => row.date.slice(0, 7) < month)), change = flow(during)
   return { opening, closing: opening + change, change, covered: during.length > 0 }
 }
 

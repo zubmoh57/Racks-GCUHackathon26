@@ -30,10 +30,18 @@ describe('income and spending breakdown', () => {
     const baseline = monthlyBaseline([row(), row({ kind: 'refund', amountPence: 500 }), row({ kind: 'income', amountPence: 32000 }), row({ kind: 'funding', amountPence: 240000 })], { startDate: '2026-09-20', endDate: '2026-10-23', statementCount: 1 })
     expect(baseline).toEqual({ income: 16000, funding: 120000, essentials: 1000 })
   })
-  it('runs a balance from zero through the months, counting transfers and withdrawals', () => {
-    const rows = [row({ id: 'a', date: '2026-09-08', kind: 'income', amountPence: 32000 }), row({ id: 'b', date: '2026-09-12', amountPence: -2000 }), row({ id: 'c', date: '2026-10-05', kind: 'cashWithdrawal', amountPence: -4000 }), row({ id: 'd', date: '2026-10-07', kind: 'transfer', amountPence: -10000 })]
+  it('runs income less spending from zero through the months', () => {
+    const rows = [row({ id: 'a', date: '2026-09-08', kind: 'income', amountPence: 32000 }), row({ id: 'b', date: '2026-09-12', amountPence: -2000 }), row({ id: 'c', date: '2026-10-05', amountPence: -77563 }), row({ id: 'd', date: '2026-10-09', kind: 'income', amountPence: 32000 })]
     expect(monthBalances(rows, '2026-09')).toEqual({ opening: 0, closing: 30000, change: 30000, covered: true })
-    expect(monthBalances(rows, '2026-10')).toEqual({ opening: 30000, closing: 16000, change: -14000, covered: true })
+    expect(monthBalances(rows, '2026-10')).toEqual({ opening: 30000, closing: -15563, change: -45563, covered: true })
+  })
+  it('leaves funding, transfers and cash withdrawals out of the balance', () => {
+    const rows = [row({ id: 'a', date: '2026-10-01', kind: 'funding', amountPence: 240000 }), row({ id: 'b', date: '2026-10-05', kind: 'cashWithdrawal', amountPence: -4000 }), row({ id: 'c', date: '2026-10-07', kind: 'transfer', amountPence: -10000 })]
+    expect(monthBalances(rows, '2026-10')).toEqual({ opening: 0, closing: 0, change: 0, covered: true })
+  })
+  it('nets a refund off the spending it reverses', () => {
+    const rows = [row({ date: '2026-10-03', amountPence: -2500 }), row({ id: 'refund', date: '2026-10-06', kind: 'refund', amountPence: 500 })]
+    expect(monthBalances(rows, '2026-10').change).toBe(-2000)
   })
   it('carries the running balance into a month with no activity of its own', () => {
     expect(monthBalances([row({ date: '2026-09-12', amountPence: -2000 })], '2026-10')).toEqual({ opening: -2000, closing: -2000, change: 0, covered: false })
