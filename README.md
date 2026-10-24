@@ -1,75 +1,34 @@
-# React + TypeScript + Vite
+﻿# Morrow — student financial wellbeing
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Combined Caledonia Hackathon project for students aged 18+ in Glasgow and the UK.
 
-Currently, two official plugins are available:
+## Run the app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Use Node.js 20.19+ or 22.13+.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm install
+npm run dev
+npm test
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+The main app starts at `/`: Blazej's dashboard and theme plus Zubair's PDF upload and review flow. Select **Transactions**, then **Try sample PDF**, review the entries and confirm to replace the fictional dashboard data. Imports stay in memory for the current session.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+The parser currently supports the synthetic **Campus v1** layout, not arbitrary bank PDFs or scanned documents. Download the sample from the upload page or use the PDFs in `fixtures/`.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Merged modules
 
-```
+- [PDF import, ledger and manual-expense logic](src/features/import/README.md): signed integer pence, explicit review, duplicate checks and synthetic PDFs.
+- [Savings engine and reference demo](savings/README.md): protected treats, sourced suggestions and selected actions. Its standalone demo is at `/savings/demo/index.html` on the development server.
+- [Planning interface and calculators](features/planning/index.ts): budgets, cash timing, goals and optional educational contribution illustrations. Its fictional standalone preview is at `/preview/index.html` on the development server.
+- [Planning integration contract](INTEGRATION.md) and [example adapter](examples/AppIntegration.tsx).
+- [Team context and responsibilities](TEAM_CONTEXT.md).
+
+The main app's **Ways to save** and **Budget & goals** routes are still integration placeholders. The two modules are preserved alongside the app; connecting them to shared state and navigation is separate implementation work. Manual cash-expense logic is available in the ledger module; its main-app form is also pending.
+
+## Checks
+
+`npm test` runs the PDF/ledger tests, dependency-free savings tests and planning calculator tests. `tsx` lets the planning tests run on Node 20 as well as newer versions without changing their source. `npm run build` type-checks the app, planning module, preview and integration example, then builds the main app.
+
+The savings and planning previews use fictional data, independent of the app's reviewed ledger. Suggestions and contribution illustrations are estimates; nothing moves money or connects to a live bank.

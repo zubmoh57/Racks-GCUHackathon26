@@ -1,0 +1,46 @@
+.cp-planner { --cp-ink: #183a43; --cp-mint: #d9eee4; --cp-line: #bed0ce; --cp-warn: #754d00; --cp-rose: #842c3e; color: var(--cp-ink); font: 16px/1.55 'Trebuchet MS', sans-serif; max-width: 1160px; margin: auto; padding: clamp(16px, 4vw, 48px); background: #f8fcfc; border-radius: 24px; }
+.cp-planner * { box-sizing: border-box; }
+.cp-planner h1 { font-size: clamp(30px, 4vw, 48px); line-height: 1.12; letter-spacing: -1.5px; max-width: 610px; margin: 0 0 16px; }
+.cp-planner h2 { font-size: 23px; line-height: 1.25; margin: 0 0 16px; }
+.cp-planner p { max-width: 72ch; margin: 12px 0; }
+.cp-header { display: flex; align-items: start; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.cp-stamp { border: 2px solid #27705a; color: #245b49; border-radius: 50%; padding: 22px 14px; max-width: 135px; text-align: center; font-size: 14px; transform: rotate(6deg); }
+.cp-layout { display: grid; grid-template-columns: 1.35fr 1fr; gap: 32px; }
+.cp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.cp-field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; }
+.cp-planner input:not([type=checkbox]) { width: 100%; border: 1px solid #718e91; border-radius: 7px; padding: 10px 11px; background: #fff; color: #183a43; font: inherit; min-height: 44px; }
+.cp-planner input[type=checkbox] { width: 20px; height: 20px; accent-color: #21634e; flex-shrink: 0; margin-top: 3px; }
+.cp-planner :focus-visible { outline: 3px solid #285cad; outline-offset: 3px; }
+.cp-planner button { border: 0; border-radius: 7px; color: white; background: #21634e; padding: 10px 16px; cursor: pointer; min-height: 44px; font: inherit; }
+.cp-check { display: flex; align-items: start; gap: 10px; margin: 20px 0; }
+.cp-planner .cp-hint { font-size: 14px; color: #426167; }
+.cp-summary { background: #e9f3f3; padding: 24px; border-radius: 16px; align-self: start; }
+.cp-planner dl { margin: 16px 0; }
+.cp-planner dl div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--cp-line); }
+.cp-planner dd { margin: 0; font-weight: 700; text-align: right; white-space: nowrap; }
+.cp-result { padding: 20px; background: var(--cp-mint); border-radius: 12px; margin: 20px 0; }
+.cp-result > strong { display: block; font-size: 38px; line-height: 1.4; }
+.cp-shortfall { background: #f9e6eb; color: var(--cp-rose); }
+.cp-warning { padding: 10px 12px; border-left: 4px solid #a97200; background: #fff3d4; color: var(--cp-warn); }
+.cp-error { display: block; color: #842c3e; font-weight: 600; }
+.cp-entries { border-top: 1px solid var(--cp-line); padding: 14px 0; }
+.cp-planner summary { cursor: pointer; min-height: 32px; font-weight: 700; }
+.cp-planner ul { padding-left: 20px; }
+.cp-entries ul { list-style: none; padding: 0; }
+.cp-entries li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--cp-line); }
+.cp-entries li > span { flex: 1; overflow-wrap: anywhere; }
+.cp-entries small { display: block; }
+.cp-planner .cp-subtle { background: #e2eded; color: #183a43; font-size: 13px; }
+.cp-entry-form { display: grid; gap: 12px; }
+.cp-goal { display: grid; grid-template-columns: 1.35fr 1fr; gap: 32px; margin-top: 40px; padding-top: 32px; border-top: 2px solid var(--cp-line); }
+.cp-goal-progress { padding: 20px 0; }
+.cp-goal-progress > p > strong { font-size: 26px; }
+.cp-planner progress { width: 100%; height: 18px; accent-color: #21634e; }
+.cp-education { margin-top: 32px; padding-top: 8px; border-top: 1px solid var(--cp-line); }
+.cp-table-wrap { overflow-x: auto; }
+.cp-planner table { width: 100%; border-collapse: collapse; margin-top: 24px; text-align: left; }
+.cp-planner caption { text-align: left; margin-bottom: 10px; font-size: 14px; }
+.cp-planner th, .cp-planner td { padding: 12px; border-bottom: 1px solid var(--cp-line); }
+.cp-planner a { color: #174f83; text-underline-offset: 3px; }
+@media (max-width: 760px) { .cp-layout, .cp-goal { grid-template-columns: 1fr; } .cp-header { display: block; } .cp-stamp { display: none; } .cp-summary { padding: 18px; } }
+@media (max-width: 420px) { .cp-grid { grid-template-columns: 1fr; } .cp-planner { border-radius: 0; padding: 16px; } .cp-planner dl div { font-size: 14px; } }

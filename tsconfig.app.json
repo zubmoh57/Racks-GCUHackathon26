@@ -22,5 +22,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "state.tsx", "Dashboard.tsx", "App.tsx", "main.tsx"]
+  "include": ["src", "state.tsx", "Dashboard.tsx", "App.tsx", "main.tsx", "features", "preview", "examples"]
 }
