@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAppState } from '../../../useAppState'
 import { analyseStatement } from '../../../savings/engine/index.js'
-import { isProtected, savingsInput } from './savingsAdapter'
+import { savingsInput } from './savingsAdapter'
 import { money } from './finance'
 
 interface Swap {
@@ -18,7 +18,7 @@ const discounts = [
 export function SavingsPage() {
   const { state, dispatch } = useAppState()
   const [tab, setTab] = useState<'swaps' | 'discounts'>('swaps')
-  const eligible = savingsInput(state.transactions, state.protections)
+  const eligible = savingsInput(state.transactions, [])
   const analysis = analyseStatement({ transactions: eligible, maxRecommendations: 5 })
   const swaps: Swap[] = []
   const average = (pattern: RegExp) => {
@@ -61,7 +61,6 @@ export function SavingsPage() {
         </article>)}
         {!swaps.length && <p className="empty-state">No specific swaps found yet. Try the Student discounts tab, or add an item description to a transaction.</p>}
       </div> : <div id="discounts-panel" role="tabpanel" aria-labelledby="discounts-tab"><div className="swaps-intro"><b>Your student status has perks.</b><span>Provider pages checked 24 October 2026. Offers can change; eligibility matters.</span></div><div className="discount-grid">{discounts.map(discount => <article className="discount-item" key={discount.name}><span className="discount-mark">{discount.mark}</span><div><span className="offer-kicker">{discount.tag}{state.transactions.some(row => discount.match.test(row.description)) ? ' · MATCHES YOUR ACTIVITY' : ''}</span><h2>{discount.title}</h2><p>{discount.detail}</p><a href={discount.url} target="_blank" rel="noreferrer">Check {discount.name} ↗</a></div></article>)}</div></div>}
-      <div className="protected-summary"><span aria-hidden="true">♡</span><div><b>{state.protections.length ? `${state.protections.length} purchase${state.protections.length === 1 ? '' : 's'} protected` : 'Some things are worth keeping.'}</b><p>Protect a purchase on your breakdown and it stays out of savings suggestions.{state.transactions.some(row => isProtected(row, state.protections)) ? ' Your protected purchases have been excluded.' : ''}</p></div><button className="text-link" onClick={() => dispatch({ type: 'navigation/go', route: 'dashboard' })}>Manage →</button></div>
     </section>
     <div className="page-actions"><button className="back-button" onClick={() => dispatch({ type: 'navigation/go', route: 'dashboard' })}>← Your breakdown</button><button className="primary-button" onClick={() => dispatch({ type: 'navigation/go', route: 'planning' })}>Build your money plan <span aria-hidden="true">→</span></button></div>
   </div>

@@ -44,3 +44,28 @@ export function allocateMoney(income: number, essentials: number, preferences: P
   const cushion = available - freedom - future
   return { essentials: reserved, freedom, cushion: cushion + (preferences.investmentReady ? 0 : future), invest: preferences.investmentReady ? future : 0, shortfall: Math.max(0, essentials - income) }
 }
+
+export type ShareKey = 'freedom' | 'cushion' | 'future'
+export type Shares = Pick<MoneyPlan, ShareKey>
+
+/** Hold the edited share; redistribute the remaining percentage between the other shares. */
+export function rebalanceShares(current: Shares, key: ShareKey, value: number): Shares {
+  const next = Math.max(0, Math.min(100, Number.isFinite(value) ? value : current[key]))
+  const others = (['freedom', 'cushion', 'future'] as const).filter(item => item !== key)
+  const remaining = 100 - next
+  const otherTotal = current[others[0]] + current[others[1]]
+  const first = Math.max(0, Math.min(remaining, otherTotal ? remaining * current[others[0]] / otherTotal : remaining))
+  return { ...current, [key]: next, [others[0]]: first, [others[1]]: remaining - first }
+}
+
+/** Largest-remainder rounding: all displayed pie percentages sum to exactly 100.0%. */
+export function piePercentages(amounts: readonly number[]): number[] {
+  const total = amounts.reduce((sum, amount) => sum + amount, 0)
+  if (total <= 0) return amounts.map(() => 0)
+  const scaled = amounts.map(amount => amount / total * 1000)
+  const units = scaled.map(Math.floor)
+  const order = scaled.map((value, index) => ({ index, remainder: value - units[index] })).sort((a, b) => b.remainder - a.remainder)
+  const remaining = 1000 - units.reduce((sum, value) => sum + value, 0)
+  for (let i = 0; i < remaining; i++) units[order[i].index]++
+  return units.map(value => value / 10)
+}

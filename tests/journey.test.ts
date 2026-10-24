@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../src/assets/contracts'
-import { allocateMoney, monthlyBaseline, spendingRatio, totals, transactionTone } from '../src/features/journey/finance'
+import { allocateMoney, monthlyBaseline, piePercentages, rebalanceShares, spendingRatio, totals, transactionTone } from '../src/features/journey/finance'
 import { isProtected, savingsInput } from '../src/features/journey/savingsAdapter'
+import { monthLabel, statementMonths } from '../src/features/import/statementMonths'
+import type { StatementImport } from '../src/features/import/types'
 
 const row = (patch: Partial<Transaction> = {}): Transaction => ({ id: 'purchase', date: '2026-10-10', description: 'TESCO GLASGOW', merchant: 'Tesco', amountPence: -2500, currency: 'GBP', kind: 'expense', category: 'Groceries', source: 'statement', ...patch })
 const preferences = { freedom: 50, cushion: 35, future: 15, investmentReady: true }
@@ -47,6 +49,45 @@ describe('monthly allocation', () => {
     expect(() => allocateMoney(-1, 0, preferences)).toThrow()
     expect(() => allocateMoney(100, 0, { ...preferences, freedom: NaN })).toThrow()
   })
+})
+
+describe('percentage controls', () => {
+  it('preserves the chosen percentage and rebalances the other two', () => {
+    expect(rebalanceShares({ freedom: 50, cushion: 35, future: 15 }, 'freedom', 70)).toEqual({ freedom: 70, cushion: 21, future: 9 })
+  })
+  it('handles a slice going from all to none without introducing an investing allocation', () => {
+    expect(rebalanceShares({ freedom: 0, cushion: 100, future: 0 }, 'cushion', 0)).toEqual({ freedom: 100, cushion: 0, future: 0 })
+  })
+  it('prevents floating-point rebalancing from creating a negative sliver', () => {
+    const result = rebalanceShares({ freedom: 0.1, cushion: 99.9, future: 0 }, 'cushion', 0.1)
+    expect(result).toEqual({ freedom: 99.9, cushion: 0.1, future: 0 })
+    expect(() => allocateMoney(100000, 0, { ...result, investmentReady: true })).not.toThrow()
+  })
+  it('clamps boundaries and always keeps the split at 100%', () => {
+    for (const key of ['freedom', 'cushion', 'future'] as const) {
+      for (const amount of [-10, 0, 0.1, 29.7, 70, 100, 120]) {
+        const result = rebalanceShares(preferences, key, amount)
+        expect(result.freedom + result.cushion + result.future).toBeCloseTo(100, 10)
+        expect(Math.min(result.freedom, result.cushion, result.future)).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+  it('displays a complete 100% even when every slice would round down', () => expect(piePercentages([1, 1, 1])).toEqual([33.4, 33.3, 33.3]))
+  it('reconciles chart percentages to 100.0% across small and uneven monetary values', () => {
+    for (let amount = 1; amount <= 300; amount++) {
+      const result = allocateMoney(amount, 17, preferences)
+      const percentages = piePercentages([result.essentials, result.freedom, result.cushion, result.invest])
+      expect(percentages.reduce((sum, value) => sum + Math.round(value * 10), 0)).toBe(1000)
+    }
+  })
+  it('shows no allocation for no money rather than a fictional full pie', () => expect(piePercentages([0, 0, 0, 0])).toEqual([0, 0, 0, 0]))
+})
+
+describe('uploaded statement months', () => {
+  const statement = (start: string, end: string): StatementImport => ({ id: start, fingerprint: start, filename: 'unhelpful-filename.pdf', layout: 'campus-v1', coverageStart: start, coverageEnd: end, transactionIds: [], excludedRows: [] })
+  it('uses statement coverage and includes every month across a year boundary', () => expect(statementMonths([statement('2026-12-20', '2027-02-03')])).toEqual(['2026-12', '2027-01', '2027-02']))
+  it('sorts and deduplicates months from multiple statements', () => expect(statementMonths([statement('2026-11-01', '2026-11-23'), statement('2026-10-01', '2026-11-10')])).toEqual(['2026-10', '2026-11']))
+  it('includes the year in the readable month label', () => expect(monthLabel('2026-10')).toBe('October 2026'))
 })
 
 describe('savings integration', () => {

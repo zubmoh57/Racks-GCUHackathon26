@@ -34,6 +34,9 @@ export type MoneyPlan = {
   cushion: number
   future: number
   investmentReady: boolean
+  goalName: string
+  goalTargetPence: number
+  confirmed: boolean
 }
 export type SharedState = {
   route: AppRoute
@@ -63,3 +66,4 @@ export type SharedAction =
   | { type: 'protections/replace'; protections: ProtectionRule[] }
   | { type: 'actions/replace'; selectedActions: SelectedAction[] }
   | { type: 'planning/preferences'; patch: Partial<MoneyPlan> }
+  | { type: 'planning/confirm'; incomePence: number; essentialsPence: number }

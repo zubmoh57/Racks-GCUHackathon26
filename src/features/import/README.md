@@ -4,7 +4,7 @@ This module supplies the PDF upload/review page and its parsing/ledger functions
 
 ## Scope
 
-- PDF drag/drop or file selection, sample PDF download, automatic transition for readable statements, and explicit review when rows are unreadable or overlap existing records.
+- PDF drag/drop or file selection, sample PDF download, uploaded month/year labels and statement coverage list, an **Add another statement** button, and explicit review when rows are unreadable or overlap existing records. Users continue to the breakdown after adding the desired statements.
 - Local PDF text extraction with PDF.js and one documented **Campus v1** adapter.
 - Structured review data: editable transactions, original row references and unresolved rows.
 - Confirmation rules: validate edits, require explicit repair/exclusion of unreadable rows, prevent exact-file duplicate imports and flag possible overlapping transactions.
@@ -16,6 +16,8 @@ This module supplies the PDF upload/review page and its parsing/ledger functions
 Blazej's frontend was the original base. After all branches were merged into `main`, the user requested the upload-first redesign. `App.tsx` connects the first journey step to `PdfUploadPage.tsx`. `pdf-upload.css` matches the shared navy/white/orange shell; the app respects reduced-motion preferences throughout.
 
 `frontendAdapter.ts` connects the canonical parser ledger to the shell's `ledger/replace` action. It displays readable category labels without changing signed pence, retains row references and file fingerprints, and derives coverage from imported periods and recorded dates. The app starts without demo rows. Clean statements are validated and added automatically; unreadable rows or potential overlaps pause for repair/exclusion or duplicate decisions. Later imports add to the same ledger.
+
+`statementMonths.ts` derives sorted, deduplicated calendar months from each statement's actual coverage, including multi-month statements and year boundaries. The upload area shows these months after parsing, and the list below retains each file's precise dates so partial months are not presented as complete coverage. The user selects **Continue to breakdown**; returning to step one retains all uploaded months in the current session.
 
 `SharedState.imports` retains import metadata across navigation. The shell's exported `StatementImport` now aliases the parser's canonical record, so there is one fingerprint/coverage schema. The shared source-row type accepts text references as well as numeric references. The page keeps only unconfirmed review edits locally; the app store owns committed transactions. Nothing is sent to a server or persisted across a refresh.
 

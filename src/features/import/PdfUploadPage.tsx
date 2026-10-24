@@ -8,6 +8,7 @@ import { createSampleStatement } from './sample';
 import { CATEGORY_LABELS, KIND_LABELS } from './types';
 import type { ImportPreview, LedgerState, Transaction, UnresolvedRow } from './types';
 import { ReviewTransactionForm } from './ReviewTransactionForm';
+import { monthLabel, statementMonths } from './statementMonths';
 import './pdf-upload.css';
 
 const money = (pence: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(pence / 100);
@@ -85,7 +86,7 @@ function StatementReview({ preview, ledger, onCommit, onCancel }: {
       <p className="pdf-note"><span aria-hidden="true">ⓘ</span> Cash withdrawals and own-account transfers are kept in your records, but don’t count as purchases.</p>
       {excluded.length > 0 && <p className="pdf-message pdf-warning">{excluded.length} unreadable row{excluded.length === 1 ? ' will' : 's will'} be left out. Your totals will cover included entries only.</p>}
       {error && <p className="pdf-message pdf-error" role="alert">{error}</p>}
-      <div className="pdf-review-footer"><button className="pdf-button pdf-secondary" type="button" onClick={onCancel}>Choose another PDF</button><button className="pdf-button pdf-primary" type="button" disabled={Boolean(pending || remainingDuplicates || editing || !rows.length)} onClick={commit}>Confirm & see spending <span aria-hidden="true">→</span></button></div>
+      <div className="pdf-review-footer"><button className="pdf-button pdf-secondary" type="button" onClick={onCancel}>Choose another PDF</button><button className="pdf-button pdf-primary" type="button" disabled={Boolean(pending || remainingDuplicates || editing || !rows.length)} onClick={commit}>Add reviewed statement <span aria-hidden="true">✓</span></button></div>
       <p className="pdf-session-note">Nothing is added until you confirm. Reviewed entries stay in this session only.</p>
     </section>
   </div>;
@@ -94,6 +95,9 @@ function StatementReview({ preview, ledger, onCommit, onCancel }: {
 export function PdfUploadPage() {
   const { state, dispatch } = useAppState();
   const ledger = getImportLedger(state);
+  const months = statementMonths(ledger.imports);
+  const [adding, setAdding] = useState(ledger.imports.length === 0);
+  const fileInput = useRef<HTMLInputElement>(null);
   const id = useId();
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -114,13 +118,13 @@ export function PdfUploadPage() {
         setPreview(next);
       } else {
         dispatch(ledgerReplacement(confirmImport(ledger, next, { transactions: next.transactions, excludedRowIds: [], acknowledgedDuplicateIds: [] })));
-        dispatch({ type: 'navigation/go', route: 'dashboard' });
+        setAdding(false);
       }
     } catch (problem) { if (attempt === request.current) setError(problem instanceof Error ? problem.message : 'This PDF could not be read. Try the sample statement.'); }
     finally { if (attempt === request.current) setBusy(false); }
   }
 
-  function drop(event: DragEvent<HTMLLabelElement>) {
+  function drop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault(); setDragging(false);
     if (busy) return;
     if (event.dataTransfer.files.length !== 1) { setError('Choose one PDF at a time.'); return; }
@@ -129,21 +133,23 @@ export function PdfUploadPage() {
 
   return <div className="pdf-import">
     <div className="page-heading"><div><p className="step-kicker">STEP 01 / GET STARTED</p><h1>Upload your bank statement.</h1><p>See your spending, income and next steps.</p></div><span className="heading-tag">PDF → your breakdown</span></div>
-    {preview ? <StatementReview key={preview.id} preview={preview} ledger={ledger} onCancel={() => { setPreview(null); setError(''); }} onCommit={next => { dispatch(ledgerReplacement(next)); dispatch({ type: 'navigation/go', route: 'dashboard' }); }} /> :
+    {preview ? <StatementReview key={preview.id} preview={preview} ledger={ledger} onCancel={() => { setPreview(null); setError(''); }} onCommit={next => { dispatch(ledgerReplacement(next)); setPreview(null); setAdding(false); }} /> :
       <section className="surface pdf-upload-card" aria-labelledby="pdf-upload-title" aria-busy={busy}>
         <div className="upload-card-top"><div><span className="file-type-label">PDF STATEMENT</span><h2 id="pdf-upload-title">Add your statement</h2></div><span className="local-badge"><span aria-hidden="true">✓</span> Processed on your device</span></div>
-        <label className={'pdf-dropzone' + (dragging ? ' dragging' : '') + (busy ? ' reading' : '')} htmlFor={id} onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={drop}>
-          <input className="pdf-sr-only" id={id} type="file" accept="application/pdf,.pdf" disabled={busy} aria-describedby={`${id}-limits`} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void read(file); }} />
+        <div className={'pdf-dropzone' + (dragging ? ' dragging' : '') + (busy ? ' reading' : '') + (!adding && !busy ? ' uploaded' : '')} onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={drop}>
+          <input className="pdf-sr-only" ref={fileInput} id={id} type="file" aria-label="Upload bank statement PDF" accept="application/pdf,.pdf" disabled={busy} aria-describedby={`${id}-limits`} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void read(file); }} />
           <span className="pdf-file-icon" aria-hidden="true"><svg width="42" height="50" viewBox="0 0 32 38" fill="none"><path d="M6 1h13l7 7v27a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.5"/><path d="M19 1v8h7M10 18h10M10 23h7M10 28h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg><span>PDF</span></span>
-          <strong>{busy ? 'Reading your statement…' : 'Drag and drop your PDF here'}</strong>
-          <span>{busy ? filename : 'or choose a file from your device'}</span>
-          {busy ? <span className="scan-track" aria-hidden="true"><i /></span> : <span className="pdf-choose">Choose a PDF <span aria-hidden="true">↑</span></span>}
+          <strong>{busy ? 'Reading your statement…' : !adding ? 'Your statements are ready' : 'Drag and drop your PDF here'}</strong>
+          {!busy && months.length > 0 && <div className="uploaded-months" aria-label="Uploaded statement months">{months.map(month => <span key={month}>✓ {monthLabel(month)}</span>)}</div>}
+          <span>{busy ? filename : !adding ? `${ledger.imports.length} statement${ledger.imports.length === 1 ? '' : 's'} added. Add another month or continue below.` : 'or choose a file from your device'}</span>
+          {busy ? <span className="scan-track" aria-hidden="true"><i /></span> : <button type="button" className="pdf-choose" onClick={() => { setAdding(true); fileInput.current?.click(); }}>{adding ? 'Choose a PDF' : '+ Add another statement'}{adding && <span aria-hidden="true">↑</span>}</button>}
           <small id={`${id}-limits`}>Text-based PDF · Up to 10 MB · 20 pages</small>
-        </label>
+        </div>
         {busy && <p className="processing-status" role="status">Reading transactions → sorting your spending → building your breakdown</p>}
         {error && <p className="pdf-message pdf-error" role="alert">{error}</p>}
         <div className="upload-bottom"><p>Campus demo format supported for now. Other bank layouts and scanned PDFs aren’t supported yet.</p><div><button className="text-link" type="button" disabled={busy} onClick={() => void read(createSampleStatement())}>Use demo statement</button><span aria-hidden="true">·</span><button className="text-link" type="button" onClick={downloadSample}>Download sample PDF</button></div></div>
-        {ledger.imports.length > 0 && <div className="imported-note"><span>✓ {ledger.imports.length} statement{ledger.imports.length === 1 ? '' : 's'} added. Uploading another adds to your records.</span><button className="text-link" onClick={() => dispatch({ type: 'navigation/go', route: 'dashboard' })}>Continue to breakdown →</button></div>}
+        {ledger.imports.length > 0 && <div className="statement-list"><h3>Uploaded statements · {months.map(monthLabel).join(', ')}</h3><ul>{ledger.imports.map(statement => <li key={statement.id}><span><b>{statementMonths([statement]).map(monthLabel).join(' – ')}</b><small>{statement.filename} · {dateLabel(statement.coverageStart)} – {dateLabel(statement.coverageEnd)}{statement.excludedRows.length > 0 ? ` · ${statement.excludedRows.length} row(s) excluded` : ''}</small></span><span className="statement-added">✓ Added</span></li>)}</ul></div>}
       </section>}
+    {!preview && ledger.imports.length > 0 && <div className="page-actions upload-actions"><button className="primary-button" disabled={busy} onClick={() => dispatch({ type: 'navigation/go', route: 'dashboard' })}>Continue to breakdown <span aria-hidden="true">→</span></button></div>}
   </div>;
 }

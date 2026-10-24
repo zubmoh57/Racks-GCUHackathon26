@@ -32,13 +32,8 @@ export default function Dashboard() {
   function addCash() {
     setEditing({ id: `manual:${crypto.randomUUID()}`, date: anchor, description: '', amountPence: 0, currency: 'GBP', kind: 'expense', category: 'other', source: 'manual' })
   }
-  function protect(id: string, label: string) {
-    const existing = state.protections.find(rule => rule.scope === 'transaction' && rule.matchingKey === id)
-    dispatch({ type: 'protections/replace', protections: existing ? state.protections.filter(rule => rule.id !== existing.id) : [...state.protections, { id: `protect:${id}`, scope: 'transaction', matchingKey: id, label }] })
-  }
   function removeCash(id: string) {
     dispatch(ledgerReplacement(removeTransaction(ledger, id)))
-    dispatch({ type: 'protections/replace', protections: state.protections.filter(rule => rule.scope !== 'transaction' || rule.matchingKey !== id) })
   }
 
   return <div className="breakdown-page">
@@ -53,17 +48,17 @@ export default function Dashboard() {
       <div className="balance-foot"><label className="check-label"><input type="checkbox" checked={includeFunding} onChange={event => setIncludeFunding(event.target.checked)} />Include student funding ({money(summary.funding)}) in the ratio</label><details><summary>How is this rated?</summary><p>Our budget guide: up to 70% great; above 70% to 90% good; above 90% to 100% needs improvement; above 100% over budget. These describe spending for the selected dates, not your overall financial health. Student funding can be a loan or a termly payment. Transfers and cash withdrawals are excluded.</p></details></div>
     </section>
     <section className="surface purchases-panel" aria-labelledby="purchases-title">
-      <div className="panel-toolbar"><div><h2 id="purchases-title">Your transactions <span className="count-badge">{displayed.length}</span></h2><p className="subtle">Categories are suggestions. Edit anything that doesn’t look right.</p></div><button className="secondary-button" onClick={addCash}>+ Add cash spending</button></div>
+      <div className="panel-toolbar"><div><h2 id="purchases-title">Your transactions <span className="count-badge">{displayed.length}</span></h2><p className="subtle">Categories are suggestions. Edit anything that doesn’t look right.</p></div><button className="secondary-button" onClick={addCash}>+ Add other expenses</button></div>
       <div className="purchase-filters"><div className="filter-tabs" aria-label="Filter transactions">{[['all', 'All activity'], ['essential', 'Essentials'], ['flexible', 'Flexible'], ['risk', 'Worth a look']].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div><input className="transaction-search" type="search" aria-label="Search transactions" placeholder="Search transactions" value={search} onChange={event => setSearch(event.target.value)} /></div>
-      {editing && <div className="pdf-import transaction-editor"><h3>{editing.source === 'manual' ? 'Cash spending' : 'Edit transaction'}</h3><ReviewTransactionForm key={editing.id} transaction={editing} startDate={editing.source === 'manual' ? '1900-01-01' : state.coverage?.startDate ?? '1900-01-01'} endDate={editing.source === 'manual' ? '2100-12-31' : state.coverage?.endDate ?? '2100-12-31'} onSave={save} onCancel={() => setEditing(null)} /></div>}
+      {editing && <div className="pdf-import transaction-editor"><h3>{editing.source === 'manual' ? 'Other expenses' : 'Edit transaction'}</h3><ReviewTransactionForm key={editing.id} transaction={editing} startDate={editing.source === 'manual' ? '1900-01-01' : state.coverage?.startDate ?? '1900-01-01'} endDate={editing.source === 'manual' ? '2100-12-31' : state.coverage?.endDate ?? '2100-12-31'} onSave={save} onCancel={() => setEditing(null)} /></div>}
       <div className="purchase-table-scroll" tabIndex={0} aria-label="Transaction list"><table className="purchase-table"><thead><tr><th>Transaction</th><th>Date</th><th>Category</th><th>Spending type</th><th className="numeric">Amount</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
-        {displayed.map(row => { const tone = transactionTone(row); const protectedRow = state.protections.some(rule => rule.scope === 'transaction' && rule.matchingKey === row.id); return <tr key={row.id} className={'transaction-' + tone}>
-          <td><div className="merchant-cell"><span className="merchant-mark" aria-hidden="true">{tone === 'incoming' ? '↓' : tone === 'risk' ? '!' : row.description.slice(0, 1)}</span><div><b>{row.description}</b>{row.confirmedItem && <small>{row.confirmedItem}</small>}{row.source === 'manual' && <small>Cash · added by you</small>}</div></div></td>
+        {displayed.map(row => { const tone = transactionTone(row); return <tr key={row.id} className={'transaction-' + tone}>
+          <td><div className="merchant-cell"><span className="merchant-mark" aria-hidden="true">{tone === 'incoming' ? '↓' : tone === 'risk' ? '!' : row.description.slice(0, 1)}</span><div><b>{row.description}</b>{row.confirmedItem && <small>{row.confirmedItem}</small>}{row.source === 'manual' && <small>Added by you</small>}</div></div></td>
           <td><time dateTime={row.date}>{dateLabel(row.date)}</time></td><td>{row.category}</td><td><span className={'transaction-badge ' + tone}>{labels[tone]}</span></td><td className={'numeric ' + (row.amountPence > 0 ? 'positive' : '')}>{row.amountPence > 0 ? '+' : '−'}{money(Math.abs(row.amountPence))}</td>
-          <td><div className="row-actions"><button className="text-link" aria-label={`Edit ${row.description}`} onClick={() => setEditing(ledger.transactions.find(item => item.id === row.id) ?? null)}>Edit</button>{row.kind === 'expense' && <button className={'protect-button' + (protectedRow ? ' protected' : '')} aria-pressed={protectedRow} aria-label={`${protectedRow ? 'Unprotect' : 'Protect'} ${row.description}`} onClick={() => protect(row.id, row.confirmedItem ?? row.description)}>{protectedRow ? '✓ Protected' : 'Protect'}</button>}{row.source === 'manual' && <button className="text-link danger-link" aria-label={`Remove ${row.description}`} onClick={() => removeCash(row.id)}>Remove</button>}</div></td>
+          <td><div className="row-actions"><button className="text-link" aria-label={`Edit ${row.description}`} onClick={() => setEditing(ledger.transactions.find(item => item.id === row.id) ?? null)}>Edit</button>{row.source === 'manual' && <button className="text-link danger-link" aria-label={`Remove ${row.description}`} onClick={() => removeCash(row.id)}>Remove</button>}</div></td>
         </tr> })}
       </tbody></table>{!displayed.length && <p className="empty-state">No transactions match this view. Try another date or filter.</p>}</div>
-      <div className="purchase-legend"><span><i className="dot essential-dot"/>Essential spending</span><span><i className="dot risk-dot"/>Possible gambling · check the merchant</span><span>Protect the purchases you want to keep.</span></div>
+      <div className="purchase-legend"><span><i className="dot essential-dot"/>Essential spending</span></div>
     </section>
     <div className="page-actions"><button className="back-button" onClick={() => dispatch({ type: 'navigation/go', route: 'import' })}>← Upload another statement</button><button className="primary-button" onClick={() => dispatch({ type: 'navigation/go', route: 'opportunities' })}>Find ways to save <span aria-hidden="true">→</span></button></div>
   </div>
